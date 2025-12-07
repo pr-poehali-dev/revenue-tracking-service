@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
+import Employees from "./pages/Employees";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
 import Orders from "./pages/Orders";
@@ -25,6 +26,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/employees" element={<Employees />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/orders" element={<Orders />} />
