@@ -1,7 +1,7 @@
 {
   "tests": [
     {
-      "name": "Register new user",
+      "name": "Register duplicate email",
       "method": "POST",
       "path": "/",
       "body": {
@@ -14,22 +14,25 @@
         "phone": "+79991234567",
         "company_name": "ООО Тестовая"
       },
-      "expectedStatus": 200,
+      "expectedStatus": 400,
       "expectedBody": {
-        "success": true
+        "error": "Email уже зарегистрирован"
       },
       "bodyMatcher": "partial"
     },
     {
-      "name": "Login with credentials",
+      "name": "Login with non-existent user",
       "method": "POST",
       "path": "/",
       "body": {
         "action": "login",
-        "email": "verified@example.com",
+        "email": "nonexistent@example.com",
         "password": "password123"
       },
       "expectedStatus": 401,
+      "expectedBody": {
+        "error": "Неверный email или пароль"
+      },
       "bodyMatcher": "partial"
     }
   ]

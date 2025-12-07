@@ -13,6 +13,12 @@ from typing import Dict, Any
 def get_db_connection():
     return psycopg2.connect(os.environ['DATABASE_URL'])
 
+def escape_sql_string(s: str) -> str:
+    """Экранирование строк для Simple Query Protocol"""
+    if s is None:
+        return 'NULL'
+    return "'" + s.replace("'", "''") + "'"
+
 def send_verification_email(email: str, code: str) -> bool:
     try:
         smtp_host = os.environ['SMTP_HOST']
@@ -64,6 +70,12 @@ def generate_jwt(user_id: int, email: str) -> str:
     return jwt.encode(payload, secret, algorithm='HS256')
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """
+    Обрабатывает регистрацию, подтверждение email и вход пользователей
+    Args: event - HTTP запрос с action: register/verify/login
+          context - контекст выполнения функции
+    Returns: JSON с результатом операции
+    """
     method = event.get('httpMethod', 'GET')
     
     if method == 'OPTIONS':
@@ -95,15 +107,17 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         cur = conn.cursor()
         
         if action == 'register':
-            email = body.get('email')
-            password = body.get('password')
-            first_name = body.get('first_name')
-            last_name = body.get('last_name')
-            middle_name = body.get('middle_name')
-            phone = body.get('phone')
-            company_name = body.get('company_name')
+            email = body.get('email', '')
+            password = body.get('password', '')
+            first_name = body.get('first_name', '')
+            last_name = body.get('last_name', '')
+            middle_name = body.get('middle_name', '')
+            phone = body.get('phone', '')
+            company_name = body.get('company_name', '')
             
             if not all([email, password, first_name, last_name, company_name]):
+                cur.close()
+                conn.close()
                 return {
                     'statusCode': 400,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -111,8 +125,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
-            cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+            # Проверка существующего пользователя
+            cur.execute(f"SELECT id FROM users WHERE email = {escape_sql_string(email)}")
             if cur.fetchone():
+                cur.close()
+                conn.close()
                 return {
                     'statusCode': 400,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -121,25 +138,31 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             
             code = ''.join([str(secrets.randbelow(10)) for _ in range(4)])
-            code_expires = datetime.utcnow() + timedelta(minutes=15)
+            code_expires = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
             password_hash = hash_password(password)
             
-            cur.execute("""
+            middle_name_sql = escape_sql_string(middle_name) if middle_name else 'NULL'
+            phone_sql = escape_sql_string(phone) if phone else 'NULL'
+            
+            cur.execute(f"""
                 INSERT INTO users (email, password_hash, first_name, last_name, middle_name, phone, 
                                    email_verification_code, verification_code_expires_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES ({escape_sql_string(email)}, {escape_sql_string(password_hash)}, 
+                        {escape_sql_string(first_name)}, {escape_sql_string(last_name)}, 
+                        {middle_name_sql}, {phone_sql}, 
+                        {escape_sql_string(code)}, '{code_expires}')
                 RETURNING id
-            """, (email, password_hash, first_name, last_name, middle_name, phone, code, code_expires))
+            """)
             
             user_id = cur.fetchone()[0]
             
-            cur.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name,))
+            cur.execute(f"INSERT INTO companies (name) VALUES ({escape_sql_string(company_name)}) RETURNING id")
             company_id = cur.fetchone()[0]
             
-            cur.execute("""
+            cur.execute(f"""
                 INSERT INTO company_users (company_id, user_id, role)
-                VALUES (%s, %s, 'owner')
-            """, (company_id, user_id))
+                VALUES ({company_id}, {user_id}, 'owner')
+            """)
             
             conn.commit()
             
@@ -161,10 +184,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
         
         elif action == 'verify':
-            email = body.get('email')
-            code = body.get('code')
+            email = body.get('email', '')
+            code = body.get('code', '')
             
             if not email or not code:
+                cur.close()
+                conn.close()
                 return {
                     'statusCode': 400,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -172,13 +197,15 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
-            cur.execute("""
+            cur.execute(f"""
                 SELECT id, email_verification_code, verification_code_expires_at, is_email_verified
-                FROM users WHERE email = %s
-            """, (email,))
+                FROM users WHERE email = {escape_sql_string(email)}
+            """)
             
             user = cur.fetchone()
             if not user:
+                cur.close()
+                conn.close()
                 return {
                     'statusCode': 404,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -189,6 +216,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             user_id, stored_code, expires_at, is_verified = user
             
             if is_verified:
+                cur.close()
+                conn.close()
                 return {
                     'statusCode': 400,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -197,6 +226,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             
             if datetime.utcnow() > expires_at:
+                cur.close()
+                conn.close()
                 return {
                     'statusCode': 400,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -205,6 +236,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             
             if code != stored_code:
+                cur.close()
+                conn.close()
                 return {
                     'statusCode': 400,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -212,12 +245,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
-            cur.execute("""
+            cur.execute(f"""
                 UPDATE users SET is_email_verified = TRUE, 
                 email_verification_code = NULL, verification_code_expires_at = NULL
-                WHERE id = %s
-            """, (user_id,))
-            
+                WHERE id = {user_id}
+            """)
             conn.commit()
             
             token = generate_jwt(user_id, email)
@@ -230,7 +262,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
                 'body': json.dumps({
                     'success': True,
-                    'message': 'Email успешно подтверждён',
                     'token': token,
                     'user_id': user_id
                 }),
@@ -238,10 +269,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
         
         elif action == 'login':
-            email = body.get('email')
-            password = body.get('password')
+            email = body.get('email', '')
+            password = body.get('password', '')
             
             if not email or not password:
+                cur.close()
+                conn.close()
                 return {
                     'statusCode': 400,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -251,13 +284,15 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             password_hash = hash_password(password)
             
-            cur.execute("""
+            cur.execute(f"""
                 SELECT id, is_email_verified FROM users 
-                WHERE email = %s AND password_hash = %s
-            """, (email, password_hash))
+                WHERE email = {escape_sql_string(email)} AND password_hash = {escape_sql_string(password_hash)}
+            """)
             
             user = cur.fetchone()
             if not user:
+                cur.close()
+                conn.close()
                 return {
                     'statusCode': 401,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -268,10 +303,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             user_id, is_verified = user
             
             if not is_verified:
+                cur.close()
+                conn.close()
                 return {
                     'statusCode': 403,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                    'body': json.dumps({'error': 'Email не подтверждён'}),
+                    'body': json.dumps({'error': 'Email не подтверждён. Проверьте почту'}),
                     'isBase64Encoded': False
                 }
             
@@ -292,6 +329,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
         
         else:
+            cur.close()
+            conn.close()
             return {
                 'statusCode': 400,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -303,6 +342,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return {
             'statusCode': 500,
             'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': f'Ошибка сервера: {str(e)}'}),
+            'body': json.dumps({'error': str(e)}),
             'isBase64Encoded': False
         }
