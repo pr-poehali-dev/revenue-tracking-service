@@ -5,6 +5,9 @@ import hashlib
 import secrets
 import base64
 import boto3
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from typing import Dict, Any
 
@@ -21,6 +24,24 @@ def hash_password(password: str) -> str:
 
 def generate_verification_code() -> str:
     return ''.join([str(secrets.randbelow(10)) for _ in range(4)])
+
+def send_email(to_email: str, subject: str, body: str):
+    smtp_host = os.environ.get('SMTP_HOST')
+    smtp_port = int(os.environ.get('SMTP_PORT', 587))
+    smtp_user = os.environ.get('SMTP_USER')
+    smtp_password = os.environ.get('SMTP_PASSWORD')
+    
+    msg = MIMEMultipart()
+    msg['From'] = smtp_user
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    
+    msg.attach(MIMEText(body, 'html', 'utf-8'))
+    
+    with smtplib.SMTP(smtp_host, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
@@ -283,6 +304,34 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 """)
                 
                 conn.commit()
+                
+                try:
+                    email_body = f"""
+                    <html>
+                    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #333;">Подтверждение смены email</h2>
+                        <p>Вы запросили изменение email адреса.</p>
+                        <p>Ваш код подтверждения:</p>
+                        <div style="background: #f5f5f5; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+                            {code}
+                        </div>
+                        <p>Код действителен в течение 10 минут.</p>
+                        <p style="color: #666; font-size: 14px;">Если вы не запрашивали смену email, проигнорируйте это письмо.</p>
+                    </body>
+                    </html>
+                    """
+                    
+                    send_email(new_email, 'Подтверждение смены email', email_body)
+                except Exception as e:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 500,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': f'Не удалось отправить email: {str(e)}'}),
+                        'isBase64Encoded': False
+                    }
+                
                 cur.close()
                 conn.close()
                 
@@ -290,8 +339,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'statusCode': 200,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
                     'body': json.dumps({
-                        'message': f'Код отправлен на {new_email}',
-                        'code': code,
+                        'message': f'Код подтверждения отправлен на {new_email}',
                         'new_email': new_email
                     }),
                     'isBase64Encoded': False

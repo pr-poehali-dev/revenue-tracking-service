@@ -232,7 +232,7 @@ export default function Profile() {
       if (response.ok) {
         toast({
           title: 'Успешно!',
-          description: `Код подтверждения: ${data.code}`
+          description: data.message || 'Код подтверждения отправлен на почту'
         });
         setEmailCodeSent(true);
       } else {
