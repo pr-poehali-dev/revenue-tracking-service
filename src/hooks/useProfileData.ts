@@ -3,6 +3,12 @@ import { useToast } from '@/hooks/use-toast';
 
 const API_URL = 'https://functions.poehali.dev/ee2d3742-725a-421c-b7d0-8d2efc6c32db';
 
+export interface Company {
+  id: number;
+  name: string;
+  role: string;
+}
+
 export interface UserProfile {
   id: number;
   email: string;
@@ -12,6 +18,8 @@ export interface UserProfile {
   phone?: string;
   avatar_url?: string;
   is_email_verified: boolean;
+  current_company_id?: number | null;
+  companies?: Company[];
 }
 
 export function useProfileData() {

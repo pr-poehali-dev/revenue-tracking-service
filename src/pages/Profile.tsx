@@ -4,6 +4,7 @@ import AvatarSection from '@/components/profile/AvatarSection';
 import PersonalDataSection from '@/components/profile/PersonalDataSection';
 import EmailSection from '@/components/profile/EmailSection';
 import SecuritySection from '@/components/profile/SecuritySection';
+import CompaniesSection from '@/components/profile/CompaniesSection';
 import LogoutSection from '@/components/profile/LogoutSection';
 import { useProfileData } from '@/hooks/useProfileData';
 import { useProfileActions } from '@/hooks/useProfileActions';
@@ -37,7 +38,9 @@ export default function Profile() {
     handleRequestEmailChange,
     handleConfirmEmailChange,
     handleAvatarUpload,
-    handleDeleteAvatar
+    handleDeleteAvatar,
+    handleSwitchCompany,
+    handleCreateCompany
   } = useProfileActions({
     setLoading,
     setEditMode,
@@ -125,6 +128,14 @@ export default function Profile() {
             setPasswordData({ new_password: '', confirm_password: '' });
           }}
           onChangePassword={handleChangePassword}
+        />
+
+        <CompaniesSection
+          currentCompanyId={profile?.current_company_id || null}
+          companies={profile?.companies || []}
+          loading={loading}
+          onSwitchCompany={handleSwitchCompany}
+          onCreateCompany={handleCreateCompany}
         />
 
         <LogoutSection />

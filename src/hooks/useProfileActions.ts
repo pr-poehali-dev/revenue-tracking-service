@@ -353,12 +353,100 @@ export function useProfileActions({
     }
   };
 
+  const handleSwitchCompany = async (companyId: number) => {
+    setLoading(true);
+    try {
+      const userId = localStorage.getItem('user_id');
+      const response = await fetch(API_URL, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userId || ''
+        },
+        body: JSON.stringify({
+          action: 'switch_company',
+          company_id: companyId
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Успешно!',
+          description: 'Компания переключена'
+        });
+        loadProfile();
+        window.location.reload();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось переключить компанию',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось связаться с сервером',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateCompany = async (name: string) => {
+    setLoading(true);
+    try {
+      const userId = localStorage.getItem('user_id');
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userId || ''
+        },
+        body: JSON.stringify({
+          action: 'create_company',
+          name
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Успешно!',
+          description: 'Компания создана'
+        });
+        loadProfile();
+        window.location.reload();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось создать компанию',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось связаться с сервером',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     handleUpdateProfile,
     handleChangePassword,
     handleRequestEmailChange,
     handleConfirmEmailChange,
     handleAvatarUpload,
-    handleDeleteAvatar
+    handleDeleteAvatar,
+    handleSwitchCompany,
+    handleCreateCompany
   };
 }

@@ -157,7 +157,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             else:
                 cur.execute(f"""
                     SELECT id, email, first_name, last_name, middle_name, phone, 
-                           avatar_url, is_email_verified, created_at
+                           avatar_url, is_email_verified, created_at, current_company_id
                     FROM users
                     WHERE id = {user_id}
                 """)
@@ -173,6 +173,15 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         'isBase64Encoded': False
                     }
                 
+                cur.execute(f"""
+                    SELECT c.id, c.name, cu.role
+                    FROM companies c
+                    JOIN company_users cu ON c.id = cu.company_id
+                    WHERE cu.user_id = {user_id}
+                    ORDER BY c.name
+                """)
+                companies = cur.fetchall()
+                
                 result = {
                     'id': user[0],
                     'email': user[1],
@@ -182,7 +191,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'phone': user[5],
                     'avatar_url': user[6],
                     'is_email_verified': user[7],
-                    'created_at': user[8].isoformat() if user[8] else None
+                    'created_at': user[8].isoformat() if user[8] else None,
+                    'current_company_id': user[9],
+                    'companies': [{'id': c[0], 'name': c[1], 'role': c[2]} for c in companies]
                 }
                 
                 cur.close()
@@ -342,6 +353,51 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         'message': f'Код подтверждения отправлен на {new_email}',
                         'new_email': new_email
                     }),
+                    'isBase64Encoded': False
+                }
+            
+            elif action == 'switch_company':
+                company_id = body.get('company_id')
+                
+                if not company_id:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'ID компании обязателен'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cur.execute(f"""
+                    SELECT id FROM company_users 
+                    WHERE user_id = {user_id} AND company_id = {company_id}
+                """)
+                if not cur.fetchone():
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 403,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Нет доступа к этой компании'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cur.execute(f"""
+                    UPDATE users
+                    SET current_company_id = {company_id},
+                        updated_at = NOW()
+                    WHERE id = {user_id}
+                """)
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'message': 'Компания переключена'}),
                     'isBase64Encoded': False
                 }
             
@@ -511,6 +567,52 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'statusCode': 200,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
                     'body': json.dumps({'message': 'Email изменен'}),
+                    'isBase64Encoded': False
+                }
+            
+            elif action == 'create_company':
+                company_name = body.get('name')
+                
+                if not company_name or len(company_name.strip()) == 0:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Название компании обязательно'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cur.execute(f"""
+                    INSERT INTO companies (name, created_at, updated_at)
+                    VALUES ({escape_sql_string(company_name)}, NOW(), NOW())
+                    RETURNING id
+                """)
+                company_id = cur.fetchone()[0]
+                
+                cur.execute(f"""
+                    INSERT INTO company_users (company_id, user_id, role, created_at)
+                    VALUES ({company_id}, {user_id}, 'owner', NOW())
+                """)
+                
+                cur.execute(f"""
+                    UPDATE users
+                    SET current_company_id = {company_id},
+                        updated_at = NOW()
+                    WHERE id = {user_id}
+                """)
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({
+                        'message': 'Компания создана',
+                        'company_id': company_id
+                    }),
                     'isBase64Encoded': False
                 }
             
