@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,15 @@ import { Badge } from '@/components/ui/badge';
 type NavItem = 'dashboard' | 'projects' | 'clients' | 'payments' | 'reports' | 'orders';
 
 const Index = () => {
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<NavItem>('dashboard');
+  
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const stats = [
     { title: 'Общая выручка', value: '12 450 000 ₽', change: '+12.5%', icon: 'TrendingUp', trend: 'up' },
@@ -57,9 +66,15 @@ const Index = () => {
     { id: 'orders' as NavItem, label: 'Заказы', icon: 'ShoppingCart' },
   ];
 
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_id');
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <aside className="fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border">
+      <aside className="fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
           <h1 className="text-2xl font-bold text-sidebar-foreground flex items-center gap-2">
             <Icon name="BarChart3" size={28} className="text-sidebar-primary" />
@@ -68,7 +83,7 @@ const Index = () => {
           <p className="text-sm text-sidebar-foreground/60 mt-1">Управление выручкой</p>
         </div>
         
-        <nav className="p-4">
+        <nav className="p-4 flex-1">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -84,6 +99,16 @@ const Index = () => {
             </button>
           ))}
         </nav>
+        
+        <div className="p-4 border-t border-sidebar-border">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all duration-200"
+          >
+            <Icon name="LogOut" size={20} />
+            <span>Выйти</span>
+          </button>
+        </div>
       </aside>
 
       <main className="ml-64 p-8">
