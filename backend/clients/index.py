@@ -334,6 +334,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
+            # Сначала помечаем контакты
+            cur.execute(f"""
+                UPDATE client_contacts 
+                SET full_name = 'REMOVED_' || id::text
+                WHERE client_id = {int(client_id)}
+            """)
+            
+            # Затем помечаем клиента
             cur.execute(f"""
                 UPDATE clients 
                 SET notes = 'DELETED', updated_at = CURRENT_TIMESTAMP 
