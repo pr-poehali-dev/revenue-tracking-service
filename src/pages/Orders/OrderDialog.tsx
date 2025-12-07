@@ -105,19 +105,6 @@ export default function OrderDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status">Статус</Label>
-              <select
-                id="status"
-                value={formData.status || 'active'}
-                onChange={(e) => onFormDataChange({ ...formData, status: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="active">Активен</option>
-                <option value="archived">В архиве</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="payment_status">Статус оплаты</Label>
               <select
                 id="payment_status"
