@@ -27,7 +27,7 @@ const Index = () => {
     totalClients: 0,
     totalOrders: 0
   });
-  const [revenueByMonth, setRevenueByMonth] = useState<{ month: string; revenue: number }[]>([]);
+  const [revenueByMonth, setRevenueByMonth] = useState<{ month: string; actual: number; planned: number }[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
 
@@ -113,7 +113,7 @@ const Index = () => {
         const totalRevenue = paidPayments.reduce((sum: number, p: any) => sum + (p.actual_amount || 0), 0);
         setStats(prev => ({ ...prev, totalRevenue }));
         
-        const monthlyRevenue = calculateMonthlyRevenue(paidPayments);
+        const monthlyRevenue = calculateMonthlyRevenue(payments);
         setRevenueByMonth(monthlyRevenue);
         
         const sortedPayments = [...paidPayments]
@@ -130,12 +130,12 @@ const Index = () => {
     const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
-    const monthlyData: { [key: string]: number } = {};
+    const monthlyData: { [key: string]: { actual: number; planned: number } } = {};
 
-    for (let i = 5; i >= 0; i--) {
+    for (let i = 0; i <= 5; i++) {
       const date = new Date(currentYear, currentDate.getMonth() - i, 1);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      monthlyData[key] = 0;
+      monthlyData[key] = { actual: 0, planned: 0 };
     }
 
     payments.forEach(payment => {
@@ -143,21 +143,39 @@ const Index = () => {
         const date = new Date(payment.actual_date);
         const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         if (monthlyData.hasOwnProperty(key)) {
-          monthlyData[key] += payment.actual_amount;
+          monthlyData[key].actual += payment.actual_amount;
+        }
+      }
+      
+      if (payment.planned_date && !payment.actual_date) {
+        const plannedAmount = payment.planned_amount || 
+          (payment.planned_amount_percent && payment.order_amount 
+            ? (payment.order_amount * payment.planned_amount_percent) / 100 
+            : 0);
+        
+        if (plannedAmount > 0) {
+          const date = new Date(payment.planned_date);
+          const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          if (monthlyData.hasOwnProperty(key)) {
+            monthlyData[key].planned += plannedAmount;
+          }
         }
       }
     });
 
-    return Object.entries(monthlyData).map(([key, revenue]) => {
-      const [year, month] = key.split('-');
-      return {
-        month: monthNames[parseInt(month) - 1],
-        revenue
-      };
-    });
+    return Object.entries(monthlyData)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([key, data]) => {
+        const [year, month] = key.split('-');
+        return {
+          month: monthNames[parseInt(month) - 1],
+          actual: data.actual,
+          planned: data.planned
+        };
+      });
   };
 
-  const maxRevenue = Math.max(...revenueByMonth.map(m => m.revenue), 1);
+  const maxRevenue = Math.max(...revenueByMonth.map(m => m.actual + m.planned), 1);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -230,14 +248,38 @@ const Index = () => {
                   <div key={index} className="space-y-2">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground font-medium">{item.month}</span>
-                      <span className="font-semibold">{formatAmount(item.revenue)}</span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="font-semibold text-green-700">{formatAmount(item.actual)}</span>
+                        {item.planned > 0 && (
+                          <span className="text-xs text-muted-foreground">План: {formatAmount(item.planned)}</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-secondary rounded-full h-2 overflow-hidden relative">
                       <div
-                        className="bg-primary h-full rounded-full transition-all duration-500 ease-out"
-                        style={{ width: `${(item.revenue / maxRevenue) * 100}%` }}
+                        className="bg-green-600 h-full rounded-full transition-all duration-500 ease-out absolute"
+                        style={{ width: `${(item.actual / maxRevenue) * 100}%` }}
+                      />
+                      <div
+                        className="bg-blue-400/40 h-full rounded-full transition-all duration-500 ease-out absolute"
+                        style={{ 
+                          width: `${((item.actual + item.planned) / maxRevenue) * 100}%`,
+                          left: 0
+                        }}
                       />
                     </div>
+                    {item.planned > 0 && (
+                      <div className="flex gap-4 text-xs">
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-green-600"></div>
+                          <span className="text-muted-foreground">Фактическая</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-blue-400/40"></div>
+                          <span className="text-muted-foreground">Планируемая</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
