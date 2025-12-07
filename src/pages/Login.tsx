@@ -124,6 +124,16 @@ const Login = () => {
                 )}
               </Button>
 
+              <div className="text-center text-sm">
+                <button
+                  type="button"
+                  onClick={() => navigate('/reset-password')}
+                  className="text-primary hover:underline"
+                >
+                  Забыли пароль?
+                </button>
+              </div>
+
               <div className="text-center text-sm text-muted-foreground">
                 Нет аккаунта?{' '}
                 <button

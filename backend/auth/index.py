@@ -59,6 +59,44 @@ def send_verification_email(email: str, code: str) -> bool:
         print(f"Email error: {e}")
         return False
 
+def send_password_reset_email(email: str, code: str) -> bool:
+    try:
+        smtp_host = os.environ['SMTP_HOST']
+        smtp_port = int(os.environ['SMTP_PORT'])
+        smtp_user = os.environ['SMTP_USER']
+        smtp_password = os.environ['SMTP_PASSWORD']
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = 'Восстановление пароля'
+        msg['From'] = smtp_user
+        msg['To'] = email
+        
+        html = f"""
+        <html>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #0EA5E9;">Восстановление пароля</h2>
+            <p>Вы запросили восстановление пароля. Ваш код подтверждения:</p>
+            <div style="background: #f0f9ff; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+              <h1 style="color: #0EA5E9; font-size: 36px; margin: 0; letter-spacing: 8px;">{code}</h1>
+            </div>
+            <p style="color: #666;">Код действителен в течение 15 минут.</p>
+            <p style="color: #999; font-size: 12px;">Если вы не запрашивали восстановление пароля, просто игнорируйте это письмо.</p>
+          </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html, 'html'))
+        
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+        
+        return True
+    except Exception as e:
+        print(f"Password reset email error: {e}")
+        return False
+
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -334,6 +372,219 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'success': True,
                     'token': token,
                     'user_id': user_id
+                }),
+                'isBase64Encoded': False
+            }
+        
+        elif action == 'request_reset':
+            email = body.get('email', '')
+            
+            if not email:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Email обязателен'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.execute(f"SELECT id FROM users WHERE email = {escape_sql_string(email)}")
+            user = cur.fetchone()
+            
+            if not user:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 404,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Пользователь с таким email не найден'}),
+                    'isBase64Encoded': False
+                }
+            
+            user_id = user[0]
+            code = ''.join([str(secrets.randbelow(10)) for _ in range(4)])
+            code_expires = (datetime.utcnow() + timedelta(minutes=15)).isoformat()
+            
+            cur.execute(f"""
+                UPDATE users 
+                SET password_reset_code = {escape_sql_string(code)}, 
+                    password_reset_expires_at = '{code_expires}'
+                WHERE id = {user_id}
+            """)
+            conn.commit()
+            
+            email_sent = False
+            try:
+                email_sent = send_password_reset_email(email, code)
+            except Exception as email_error:
+                print(f"Failed to send password reset email: {email_error}")
+            
+            cur.close()
+            conn.close()
+            
+            message = 'Код восстановления отправлен на email' if email_sent else f'Код восстановления: {code}'
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({
+                    'success': True,
+                    'message': message,
+                    'email_sent': email_sent,
+                    'code': code if not email_sent else None
+                }),
+                'isBase64Encoded': False
+            }
+        
+        elif action == 'verify_reset':
+            email = body.get('email', '')
+            code = body.get('code', '')
+            
+            if not email or not code:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Email и код обязательны'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.execute(f"""
+                SELECT id, password_reset_code, password_reset_expires_at
+                FROM users WHERE email = {escape_sql_string(email)}
+            """)
+            
+            user = cur.fetchone()
+            if not user:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 404,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Пользователь не найден'}),
+                    'isBase64Encoded': False
+                }
+            
+            user_id, stored_code, expires_at = user
+            
+            if not stored_code:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Код восстановления не запрашивался'}),
+                    'isBase64Encoded': False
+                }
+            
+            if datetime.utcnow() > expires_at:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Код истёк. Запросите новый'}),
+                    'isBase64Encoded': False
+                }
+            
+            if code != stored_code:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Неверный код'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({
+                    'success': True,
+                    'message': 'Код подтверждён'
+                }),
+                'isBase64Encoded': False
+            }
+        
+        elif action == 'reset_password':
+            email = body.get('email', '')
+            code = body.get('code', '')
+            new_password = body.get('new_password', '')
+            
+            if not email or not code or not new_password:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Email, код и новый пароль обязательны'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.execute(f"""
+                SELECT id, password_reset_code, password_reset_expires_at
+                FROM users WHERE email = {escape_sql_string(email)}
+            """)
+            
+            user = cur.fetchone()
+            if not user:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 404,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Пользователь не найден'}),
+                    'isBase64Encoded': False
+                }
+            
+            user_id, stored_code, expires_at = user
+            
+            if not stored_code or code != stored_code:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Неверный код'}),
+                    'isBase64Encoded': False
+                }
+            
+            if datetime.utcnow() > expires_at:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Код истёк'}),
+                    'isBase64Encoded': False
+                }
+            
+            new_password_hash = hash_password(new_password)
+            
+            cur.execute(f"""
+                UPDATE users 
+                SET password_hash = {escape_sql_string(new_password_hash)},
+                    password_reset_code = NULL,
+                    password_reset_expires_at = NULL
+                WHERE id = {user_id}
+            """)
+            conn.commit()
+            
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({
+                    'success': True,
+                    'message': 'Пароль успешно изменён'
                 }),
                 'isBase64Encoded': False
             }
