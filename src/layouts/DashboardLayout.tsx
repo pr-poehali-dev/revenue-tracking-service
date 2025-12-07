@@ -1,6 +1,7 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,16 +14,39 @@ type NavItem = {
   path: string;
 };
 
+const API_URL = 'https://functions.poehali.dev/ee2d3742-725a-421c-b7d0-8d2efc6c32db';
+
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [userProfile, setUserProfile] = useState<{ avatar_url?: string; first_name: string; last_name: string } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
       navigate('/login');
+    } else {
+      loadUserProfile();
     }
   }, [navigate]);
+
+  const loadUserProfile = async () => {
+    try {
+      const userId = localStorage.getItem('user_id');
+      const response = await fetch(API_URL, {
+        method: 'GET',
+        headers: {
+          'X-User-Id': userId || ''
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setUserProfile(data);
+      }
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+    }
+  };
 
   const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Дашборд', icon: 'LayoutDashboard', path: '/' },
@@ -50,6 +74,32 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <p className="text-sm text-sidebar-foreground/60 mt-1">Управление выручкой</p>
         </div>
         
+        <div className="p-4 border-b border-sidebar-border">
+          <button
+            onClick={() => navigate('/profile')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+              location.pathname === '/profile'
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+            }`}
+          >
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={userProfile?.avatar_url || ''} />
+              <AvatarFallback className="text-xs">
+                {userProfile?.first_name?.[0]}{userProfile?.last_name?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col items-start">
+              <span className="text-sm font-medium">Профиль</span>
+              {userProfile && (
+                <span className="text-xs opacity-70">
+                  {userProfile.first_name} {userProfile.last_name}
+                </span>
+              )}
+            </div>
+          </button>
+        </div>
+        
         <nav className="p-4 flex-1">
           {navItems.map((item) => (
             <button
@@ -67,18 +117,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           ))}
         </nav>
         
-        <div className="p-4 border-t border-sidebar-border space-y-1">
-          <button
-            onClick={() => navigate('/profile')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-              location.pathname === '/profile'
-                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-            }`}
-          >
-            <Icon name="User" size={20} />
-            <span>Профиль</span>
-          </button>
+        <div className="p-4 border-t border-sidebar-border">
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all duration-200"
