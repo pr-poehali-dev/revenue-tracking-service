@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/table';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import DashboardLayout from '@/layouts/DashboardLayout';
 
 interface Contact {
   id?: number;
@@ -268,17 +269,18 @@ export default function Clients() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">Клиенты</h2>
-          <p className="text-muted-foreground mt-1">Управление базой клиентов компании</p>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-bold text-foreground">Клиенты</h2>
+            <p className="text-muted-foreground mt-1">Управление базой клиентов компании</p>
+          </div>
+          <Button onClick={() => handleOpenDialog()} disabled={loading}>
+            <Icon name="Plus" size={20} className="mr-2" />
+            Добавить клиента
+          </Button>
         </div>
-        <Button onClick={() => handleOpenDialog()} disabled={loading}>
-          <Icon name="Plus" size={20} className="mr-2" />
-          Добавить клиента
-        </Button>
-      </div>
 
       <Card>
         <CardHeader>
@@ -469,6 +471,7 @@ export default function Clients() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

@@ -123,7 +123,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                            COUNT(cc.id) as contacts_count
                     FROM clients c
                     LEFT JOIN client_contacts cc ON c.id = cc.client_id
-                    WHERE c.company_id = {company_id}
+                    WHERE c.company_id = {company_id} AND c.notes != 'DELETED'
                     GROUP BY c.id, c.name, c.notes, c.created_at
                     ORDER BY c.created_at DESC
                 """)
@@ -309,11 +309,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             
             cur.execute(f"""
-                SELECT id FROM clients 
+                SELECT id, notes FROM clients 
                 WHERE id = {int(client_id)} AND company_id = {company_id}
             """)
             
-            if not cur.fetchone():
+            row = cur.fetchone()
+            if not row:
                 cur.close()
                 conn.close()
                 return {
@@ -323,7 +324,21 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
-            cur.execute(f"UPDATE clients SET notes = 'DELETED' WHERE id = {int(client_id)}")
+            if row[1] == 'DELETED':
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Клиент уже удалён'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.execute(f"""
+                UPDATE clients 
+                SET notes = 'DELETED', updated_at = CURRENT_TIMESTAMP 
+                WHERE id = {int(client_id)}
+            """)
             
             conn.commit()
             cur.close()

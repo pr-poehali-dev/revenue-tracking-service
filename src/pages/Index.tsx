@@ -12,20 +12,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import Clients from './Clients';
-
-type NavItem = 'dashboard' | 'projects' | 'clients' | 'payments' | 'reports' | 'orders';
+import DashboardLayout from '@/layouts/DashboardLayout';
 
 const Index = () => {
-  const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState<NavItem>('dashboard');
-  
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      navigate('/login');
-    }
-  }, [navigate]);
 
   const stats = [
     { title: 'Общая выручка', value: '12 450 000 ₽', change: '+12.5%', icon: 'TrendingUp', trend: 'up' },
@@ -58,69 +47,14 @@ const Index = () => {
     { id: 3, client: 'ИП Иванов', amount: 300000, date: '2025-12-01', project: 'Мобильное приложение' },
   ];
 
-  const navItems = [
-    { id: 'dashboard' as NavItem, label: 'Дашборд', icon: 'LayoutDashboard' },
-    { id: 'projects' as NavItem, label: 'Проекты', icon: 'Briefcase' },
-    { id: 'clients' as NavItem, label: 'Клиенты', icon: 'Users' },
-    { id: 'payments' as NavItem, label: 'Платежи', icon: 'CreditCard' },
-    { id: 'reports' as NavItem, label: 'Отчёты', icon: 'FileText' },
-    { id: 'orders' as NavItem, label: 'Заказы', icon: 'ShoppingCart' },
-  ];
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_id');
-    navigate('/login');
-  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <aside className="fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
-        <div className="p-6 border-b border-sidebar-border">
-          <h1 className="text-2xl font-bold text-sidebar-foreground flex items-center gap-2">
-            <Icon name="BarChart3" size={28} className="text-sidebar-primary" />
-            Revenue Track
-          </h1>
-          <p className="text-sm text-sidebar-foreground/60 mt-1">Управление выручкой</p>
-        </div>
-        
-        <nav className="p-4 flex-1">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveSection(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-all duration-200 ${
-                activeSection === item.id
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-              }`}
-            >
-              <Icon name={item.icon} size={20} />
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        
-        <div className="p-4 border-t border-sidebar-border">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all duration-200"
-          >
-            <Icon name="LogOut" size={20} />
-            <span>Выйти</span>
-          </button>
-        </div>
-      </aside>
-
-      <main className="ml-64 p-8">
-        {activeSection === 'clients' ? (
-          <Clients />
-        ) : (
-          <>
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-foreground mb-2">Дашборд</h2>
-              <p className="text-muted-foreground">Обзор ключевых показателей компании</p>
-            </div>
+    <DashboardLayout>
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-foreground mb-2">Дашборд</h2>
+        <p className="text-muted-foreground">Обзор ключевых показателей компании</p>
+      </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, index) => (
@@ -241,12 +175,9 @@ const Index = () => {
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-          </>
-        )}
-      </main>
-    </div>
+        </CardContent>
+      </Card>
+    </DashboardLayout>
   );
 };
 
