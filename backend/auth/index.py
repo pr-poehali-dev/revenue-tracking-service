@@ -206,27 +206,27 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             conn.commit()
             
-            # Отправка email не должна ломать процесс регистрации
-            email_sent = False
-            try:
-                email_sent = send_verification_email(email, code)
-            except Exception as email_error:
-                print(f"Failed to send email: {email_error}")
+            # Отправка email обязательна для безопасности
+            email_sent = send_verification_email(email, code)
             
             cur.close()
             conn.close()
             
-            message = 'Код подтверждения отправлен на email' if email_sent else f'Регистрация завершена. Код подтверждения: {code}'
+            if not email_sent:
+                return {
+                    'statusCode': 500,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Не удалось отправить код на email. Проверьте настройки почты'}),
+                    'isBase64Encoded': False
+                }
             
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
                 'body': json.dumps({
                     'success': True,
-                    'message': message,
-                    'email_sent': email_sent,
-                    'user_id': user_id,
-                    'code': code if not email_sent else None
+                    'message': 'Код подтверждения отправлен на email',
+                    'user_id': user_id
                 }),
                 'isBase64Encoded': False
             }
@@ -414,25 +414,25 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             """)
             conn.commit()
             
-            email_sent = False
-            try:
-                email_sent = send_password_reset_email(email, code)
-            except Exception as email_error:
-                print(f"Failed to send password reset email: {email_error}")
+            email_sent = send_password_reset_email(email, code)
             
             cur.close()
             conn.close()
             
-            message = 'Код восстановления отправлен на email' if email_sent else f'Код восстановления: {code}'
+            if not email_sent:
+                return {
+                    'statusCode': 500,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Не удалось отправить код на email. Проверьте настройки почты'}),
+                    'isBase64Encoded': False
+                }
             
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
                 'body': json.dumps({
                     'success': True,
-                    'message': message,
-                    'email_sent': email_sent,
-                    'code': code if not email_sent else None
+                    'message': 'Код восстановления отправлен на email'
                 }),
                 'isBase64Encoded': False
             }

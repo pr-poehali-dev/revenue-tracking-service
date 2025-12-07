@@ -46,14 +46,9 @@ export default function ResetPassword() {
       const data = await response.json();
       
       if (response.ok && data.success) {
-        const description = data.email_sent 
-          ? 'Код восстановления отправлен на вашу почту'
-          : `Код восстановления: ${data.code}`;
-        
         toast({
           title: 'Успешно!',
-          description: description,
-          duration: data.email_sent ? 3000 : 10000
+          description: 'Код восстановления отправлен на вашу почту'
         });
         setStep('code');
       } else {
