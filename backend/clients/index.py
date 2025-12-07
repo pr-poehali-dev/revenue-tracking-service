@@ -123,7 +123,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                            COUNT(cc.id) as contacts_count
                     FROM clients c
                     LEFT JOIN client_contacts cc ON c.id = cc.client_id
-                    WHERE c.company_id = {company_id} AND c.notes != 'DELETED'
+                    WHERE c.company_id = {company_id} AND (c.notes IS NULL OR c.notes != 'DELETED')
                     GROUP BY c.id, c.name, c.notes, c.created_at
                     ORDER BY c.created_at DESC
                 """)
