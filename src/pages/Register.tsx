@@ -54,6 +54,7 @@ const Register = () => {
     setLoading(true);
     
     try {
+      console.log('Отправка регистрации:', formData);
       const response = await fetch('https://functions.poehali.dev/a9148039-69fe-4592-b9b4-1294406b914d', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,7 +70,9 @@ const Register = () => {
         })
       });
       
+      console.log('Статус ответа:', response.status);
       const data = await response.json();
+      console.log('Данные ответа:', data);
       
       if (response.ok && data.success) {
         const description = data.email_sent 
@@ -83,6 +86,7 @@ const Register = () => {
         });
         setStep('verify');
       } else {
+        console.error('Ошибка регистрации:', data);
         toast({
           title: 'Ошибка',
           description: data.error || 'Не удалось зарегистрироваться',
@@ -90,6 +94,7 @@ const Register = () => {
         });
       }
     } catch (error) {
+      console.error('Ошибка сети:', error);
       toast({
         title: 'Ошибка',
         description: 'Не удалось связаться с сервером',
