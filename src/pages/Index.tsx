@@ -131,35 +131,26 @@ const Index = () => {
     const monthlyData: { [key: string]: { actual: number; planned: number } } = {};
 
     payments.forEach(payment => {
-      const plannedAmount = payment.planned_amount || 
-        (payment.planned_amount_percent && payment.order_amount 
-          ? (payment.order_amount * payment.planned_amount_percent) / 100 
-          : 0);
+      const plannedAmount = payment.planned_amount_percent && payment.order_amount 
+        ? (payment.order_amount * payment.planned_amount_percent) / 100 
+        : (payment.planned_amount || 0);
 
       if (payment.planned_date && plannedAmount > 0) {
-        const date = new Date(payment.planned_date);
-        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        if (!monthlyData[key]) {
-          monthlyData[key] = { actual: 0, planned: 0 };
+        const plannedDate = new Date(payment.planned_date);
+        const plannedKey = `${plannedDate.getFullYear()}-${String(plannedDate.getMonth() + 1).padStart(2, '0')}`;
+        if (!monthlyData[plannedKey]) {
+          monthlyData[plannedKey] = { actual: 0, planned: 0 };
         }
-        monthlyData[key].planned += plannedAmount;
+        monthlyData[plannedKey].planned += plannedAmount;
       }
 
       if (payment.actual_date && payment.actual_amount > 0) {
-        const date = new Date(payment.actual_date);
-        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        if (!monthlyData[key]) {
-          monthlyData[key] = { actual: 0, planned: 0 };
+        const actualDate = new Date(payment.actual_date);
+        const actualKey = `${actualDate.getFullYear()}-${String(actualDate.getMonth() + 1).padStart(2, '0')}`;
+        if (!monthlyData[actualKey]) {
+          monthlyData[actualKey] = { actual: 0, planned: 0 };
         }
-        monthlyData[key].actual += payment.actual_amount;
-        
-        if (payment.planned_date) {
-          const plannedDate = new Date(payment.planned_date);
-          const plannedKey = `${plannedDate.getFullYear()}-${String(plannedDate.getMonth() + 1).padStart(2, '0')}`;
-          if (monthlyData[plannedKey] && plannedAmount > 0) {
-            monthlyData[plannedKey].planned = Math.max(0, monthlyData[plannedKey].planned - plannedAmount);
-          }
-        }
+        monthlyData[actualKey].actual += payment.actual_amount;
       }
     });
 
