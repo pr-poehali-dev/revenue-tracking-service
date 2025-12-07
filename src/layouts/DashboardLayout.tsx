@@ -26,8 +26,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Дашборд', icon: 'LayoutDashboard', path: '/' },
-    { id: 'projects', label: 'Проекты', icon: 'Briefcase', path: '/projects' },
     { id: 'clients', label: 'Клиенты', icon: 'Users', path: '/clients' },
+    { id: 'projects', label: 'Проекты', icon: 'FolderKanban', path: '/projects' },
     { id: 'payments', label: 'Платежи', icon: 'CreditCard', path: '/payments' },
     { id: 'reports', label: 'Отчёты', icon: 'FileText', path: '/reports' },
     { id: 'orders', label: 'Заказы', icon: 'ShoppingCart', path: '/orders' },

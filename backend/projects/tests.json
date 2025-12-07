@@ -1,0 +1,30 @@
+{
+  "tests": [
+    {
+      "name": "Get projects without auth",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "Требуется авторизация"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create project without name",
+      "method": "POST",
+      "path": "/",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "body": {
+        "description": "Test description"
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "Название проекта обязательно"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
