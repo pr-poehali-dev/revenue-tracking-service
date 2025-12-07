@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import Clients from './Clients';
 
 type NavItem = 'dashboard' | 'projects' | 'clients' | 'payments' | 'reports' | 'orders';
 
@@ -112,10 +113,14 @@ const Index = () => {
       </aside>
 
       <main className="ml-64 p-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">Дашборд</h2>
-          <p className="text-muted-foreground">Обзор ключевых показателей компании</p>
-        </div>
+        {activeSection === 'clients' ? (
+          <Clients />
+        ) : (
+          <>
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-foreground mb-2">Дашборд</h2>
+              <p className="text-muted-foreground">Обзор ключевых показателей компании</p>
+            </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, index) => (
@@ -238,6 +243,8 @@ const Index = () => {
             </Table>
           </CardContent>
         </Card>
+          </>
+        )}
       </main>
     </div>
   );
