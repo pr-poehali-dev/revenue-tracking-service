@@ -67,9 +67,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             if order_id:
                 cur.execute(f"""
-                    SELECT o.id, o.name, o.description, o.amount, o.status, o.payment_status, 
+                    SELECT o.id, o.name, o.description, o.amount, o.order_status, o.payment_status, 
                            o.payment_type, o.planned_date, o.actual_date, o.project_id, 
-                           o.created_at, o.updated_at,
+                           o.created_at, o.updated_at, o.status,
                            p.name as project_name, c.name as client_name
                     FROM orders o
                     LEFT JOIN projects p ON o.project_id = p.id
@@ -93,7 +93,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'name': order[1],
                     'description': order[2],
                     'amount': float(order[3]) if order[3] else 0,
-                    'status': order[4],
+                    'order_status': order[4],
                     'payment_status': order[5],
                     'payment_type': order[6],
                     'planned_date': order[7].isoformat() if order[7] else None,
@@ -101,8 +101,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'project_id': order[9],
                     'created_at': order[10].isoformat() if order[10] else None,
                     'updated_at': order[11].isoformat() if order[11] else None,
-                    'project_name': order[12],
-                    'client_name': order[13]
+                    'status': order[12],
+                    'project_name': order[13],
+                    'client_name': order[14]
                 }
                 
                 cur.close()
@@ -115,20 +116,17 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             else:
-                status_condition = ""
-                if status_filter and status_filter in ['new', 'in_progress', 'completed', 'done', 'archived']:
-                    status_condition = f"AND o.status = {escape_sql_string(status_filter)}"
-                else:
-                    status_condition = "AND o.status != 'removed'"
+                if status_filter not in ['active', 'archived']:
+                    status_filter = 'active'
                 
                 cur.execute(f"""
-                    SELECT o.id, o.name, o.description, o.amount, o.status, o.payment_status, 
+                    SELECT o.id, o.name, o.description, o.amount, o.order_status, o.payment_status, 
                            o.payment_type, o.planned_date, o.project_id, o.created_at,
                            p.name as project_name, c.name as client_name
                     FROM orders o
                     LEFT JOIN projects p ON o.project_id = p.id
                     LEFT JOIN clients c ON p.client_id = c.id
-                    WHERE o.company_id = {company_id} {status_condition}
+                    WHERE o.company_id = {company_id} AND o.status = {escape_sql_string(status_filter)}
                     ORDER BY o.created_at DESC
                 """)
                 
@@ -140,7 +138,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         'name': row[1],
                         'description': row[2],
                         'amount': float(row[3]) if row[3] else 0,
-                        'status': row[4],
+                        'order_status': row[4],
                         'payment_status': row[5],
                         'payment_type': row[6],
                         'planned_date': row[7].isoformat() if row[7] else None,
@@ -167,7 +165,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             name = body.get('name', '').strip()
             description = body.get('description', '').strip()
             amount = body.get('amount', 0)
-            status = body.get('status', 'new')
+            order_status = body.get('order_status', 'new')
             payment_status = body.get('payment_status', 'not_paid')
             payment_type = body.get('payment_type', 'postpaid')
             planned_date = body.get('planned_date')
@@ -190,11 +188,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             actual_date_sql = escape_sql_string(actual_date) if actual_date else 'NULL'
             
             cur.execute(f"""
-                INSERT INTO orders (company_id, name, description, amount, status, payment_status, 
-                                   payment_type, planned_date, actual_date, project_id)
+                INSERT INTO orders (company_id, name, description, amount, order_status, payment_status, 
+                                   payment_type, planned_date, actual_date, project_id, status)
                 VALUES ({company_id}, {escape_sql_string(name)}, {description_sql}, {amount}, 
-                        {escape_sql_string(status)}, {escape_sql_string(payment_status)}, 
-                        {escape_sql_string(payment_type)}, {planned_date_sql}, {actual_date_sql}, {project_id_sql})
+                        {escape_sql_string(order_status)}, {escape_sql_string(payment_status)}, 
+                        {escape_sql_string(payment_type)}, {planned_date_sql}, {actual_date_sql}, {project_id_sql}, 'active')
                 RETURNING id
             """)
             
@@ -217,7 +215,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             name = body.get('name', '').strip()
             description = body.get('description', '').strip()
             amount = body.get('amount', 0)
-            status = body.get('status', 'new')
+            order_status = body.get('order_status', 'new')
+            status = body.get('status', 'active')
             payment_status = body.get('payment_status', 'not_paid')
             payment_type = body.get('payment_type', 'postpaid')
             planned_date = body.get('planned_date')
@@ -254,11 +253,15 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             planned_date_sql = escape_sql_string(planned_date) if planned_date else 'NULL'
             actual_date_sql = escape_sql_string(actual_date) if actual_date else 'NULL'
             
+            if status not in ['active', 'archived', 'removed']:
+                status = 'active'
+            
             cur.execute(f"""
                 UPDATE orders 
                 SET name = {escape_sql_string(name)}, 
                     description = {description_sql},
                     amount = {amount},
+                    order_status = {escape_sql_string(order_status)},
                     status = {escape_sql_string(status)},
                     payment_status = {escape_sql_string(payment_status)},
                     payment_type = {escape_sql_string(payment_type)},

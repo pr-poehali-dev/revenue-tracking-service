@@ -14,23 +14,28 @@ import { Order, ORDER_STATUSES, PAYMENT_STATUSES } from './types';
 interface OrdersTableProps {
   orders: Order[];
   loading: boolean;
+  viewMode: 'active' | 'archived';
   onViewDetails: (orderId: number) => void;
+  onArchive: (orderId: number) => void;
+  onActivate: (orderId: number) => void;
   onDelete: (orderId: number) => void;
 }
 
 export default function OrdersTable({
   orders,
   loading,
+  viewMode,
   onViewDetails,
+  onArchive,
+  onActivate,
   onDelete,
 }: OrdersTableProps) {
-  const getStatusBadge = (status: string) => {
+  const getOrderStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
       new: 'bg-blue-100 text-blue-800',
       in_progress: 'bg-yellow-100 text-yellow-800',
       completed: 'bg-green-100 text-green-800',
-      done: 'bg-gray-100 text-gray-800',
-      archived: 'bg-gray-100 text-gray-800'
+      done: 'bg-gray-100 text-gray-800'
     };
     
     return (
@@ -89,7 +94,7 @@ export default function OrdersTable({
                 <TableHead>Название</TableHead>
                 <TableHead>Проект</TableHead>
                 <TableHead>Сумма</TableHead>
-                <TableHead>Статус</TableHead>
+                <TableHead>Статус заказа</TableHead>
                 <TableHead>Оплата</TableHead>
                 <TableHead>Плановая дата</TableHead>
                 <TableHead className="text-right">Действия</TableHead>
@@ -112,7 +117,7 @@ export default function OrdersTable({
                     )}
                   </TableCell>
                   <TableCell className="font-semibold">{formatAmount(order.amount)}</TableCell>
-                  <TableCell>{getStatusBadge(order.status)}</TableCell>
+                  <TableCell>{getOrderStatusBadge(order.order_status)}</TableCell>
                   <TableCell>{getPaymentStatusBadge(order.payment_status)}</TableCell>
                   <TableCell>
                     {order.planned_date ? new Date(order.planned_date).toLocaleDateString('ru-RU') : '—'}
@@ -127,6 +132,26 @@ export default function OrdersTable({
                       >
                         <Icon name="Eye" size={16} />
                       </Button>
+                      {viewMode === 'active' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onArchive(order.id!)}
+                          title="В архив"
+                        >
+                          <Icon name="Archive" size={16} />
+                        </Button>
+                      )}
+                      {viewMode === 'archived' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onActivate(order.id!)}
+                          title="Вернуть в активные"
+                        >
+                          <Icon name="ArchiveRestore" size={16} />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

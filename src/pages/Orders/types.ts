@@ -3,7 +3,8 @@ export interface Order {
   name: string;
   description: string;
   amount: number;
-  status: string;
+  order_status: string;
+  status?: string;
   payment_status: string;
   payment_type: string;
   planned_date?: string;
@@ -19,9 +20,7 @@ export const ORDER_STATUSES = {
   new: 'Новый',
   in_progress: 'В работе',
   completed: 'Работы выполнены',
-  done: 'Завершён',
-  removed: 'Удалён',
-  archived: 'Архив'
+  done: 'Завершён'
 } as const;
 
 export const PAYMENT_STATUSES = {

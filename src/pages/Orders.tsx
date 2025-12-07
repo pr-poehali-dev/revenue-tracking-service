@@ -22,14 +22,15 @@ export default function Orders() {
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'active' | 'archived'>('active');
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<Order>({
     name: '',
     description: '',
     amount: 0,
-    status: 'new',
+    order_status: 'new',
+    status: 'active',
     payment_status: 'not_paid',
     payment_type: 'postpaid',
     project_id: undefined,
@@ -40,15 +41,13 @@ export default function Orders() {
   useEffect(() => {
     loadOrders();
     loadProjects();
-  }, [statusFilter]);
+  }, [viewMode]);
 
   const loadOrders = async () => {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
-      const url = statusFilter === 'all' 
-        ? API_URL 
-        : `${API_URL}?status=${statusFilter}`;
+      const url = `${API_URL}?status=${viewMode}`;
       
       const response = await fetch(url, {
         method: 'GET',
@@ -107,7 +106,8 @@ export default function Orders() {
         name: order.name,
         description: order.description || '',
         amount: order.amount || 0,
-        status: order.status || 'new',
+        order_status: order.order_status || 'new',
+        status: order.status || 'active',
         payment_status: order.payment_status || 'not_paid',
         payment_type: order.payment_type || 'postpaid',
         project_id: order.project_id,
@@ -120,7 +120,8 @@ export default function Orders() {
         name: '',
         description: '',
         amount: 0,
-        status: 'new',
+        order_status: 'new',
+        status: 'active',
         payment_status: 'not_paid',
         payment_type: 'postpaid',
         project_id: undefined,
@@ -176,6 +177,121 @@ export default function Orders() {
         toast({
           title: 'Ошибка',
           description: data.error || 'Не удалось сохранить заказ',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось связаться с сервером',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleArchive = async (orderId: number) => {
+    if (!confirm('Переместить заказ в архив?')) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userId = localStorage.getItem('user_id');
+      const order = orders.find(o => o.id === orderId);
+      const response = await fetch(API_URL, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userId || ''
+        },
+        body: JSON.stringify({
+          id: orderId,
+          name: order?.name || '',
+          description: order?.description || '',
+          amount: order?.amount || 0,
+          order_status: order?.order_status || 'new',
+          payment_status: order?.payment_status || 'not_paid',
+          payment_type: order?.payment_type || 'postpaid',
+          project_id: order?.project_id,
+          planned_date: order?.planned_date,
+          actual_date: order?.actual_date,
+          status: 'archived'
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Успешно!',
+          description: 'Заказ перемещён в архив'
+        });
+        setViewMode('active');
+        loadOrders();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось архивировать заказ',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось связаться с сервером',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleActivate = async (orderId: number) => {
+    if (!confirm('Вернуть заказ в активный статус?')) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userId = localStorage.getItem('user_id');
+      const order = orders.find(o => o.id === orderId);
+      const response = await fetch(API_URL, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userId || ''
+        },
+        body: JSON.stringify({
+          id: orderId,
+          name: order?.name || '',
+          description: order?.description || '',
+          amount: order?.amount || 0,
+          order_status: order?.order_status || 'new',
+          payment_status: order?.payment_status || 'not_paid',
+          payment_type: order?.payment_type || 'postpaid',
+          project_id: order?.project_id,
+          planned_date: order?.planned_date,
+          actual_date: order?.actual_date,
+          status: 'active'
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Успешно!',
+          description: 'Заказ возвращён в активные'
+        });
+        loadOrders();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось активировать заказ',
           variant: 'destructive'
         });
       }
@@ -274,30 +390,36 @@ export default function Orders() {
             <p className="text-muted-foreground mt-1">Управление заказами компании</p>
           </div>
           <div className="flex gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            <Button
+              variant={viewMode === 'active' ? 'default' : 'outline'}
+              onClick={() => setViewMode('active')}
               disabled={loading}
             >
-              <option value="all">Все заказы</option>
-              <option value="new">Новые</option>
-              <option value="in_progress">В работе</option>
-              <option value="completed">Работы выполнены</option>
-              <option value="done">Завершённые</option>
-              <option value="archived">Архив</option>
-            </select>
-            <Button onClick={() => handleOpenDialog()} disabled={loading}>
-              <Icon name="Plus" size={20} className="mr-2" />
-              Добавить заказ
+              Активные
             </Button>
+            <Button
+              variant={viewMode === 'archived' ? 'default' : 'outline'}
+              onClick={() => setViewMode('archived')}
+              disabled={loading}
+            >
+              Архив
+            </Button>
+            {viewMode === 'active' && (
+              <Button onClick={() => handleOpenDialog()} disabled={loading}>
+                <Icon name="Plus" size={20} className="mr-2" />
+                Добавить заказ
+              </Button>
+            )}
           </div>
         </div>
 
         <OrdersTable
           orders={orders}
           loading={loading}
+          viewMode={viewMode}
           onViewDetails={handleViewDetails}
+          onArchive={handleArchive}
+          onActivate={handleActivate}
           onDelete={handleDelete}
         />
 
