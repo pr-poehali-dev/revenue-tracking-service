@@ -66,7 +66,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             if client_id:
                 cur.execute(f"""
-                    SELECT id, name, notes, created_at, updated_at
+                    SELECT id, name, notes, status, created_at, updated_at
                     FROM clients 
                     WHERE id = {int(client_id)} AND company_id = {company_id}
                 """)
@@ -94,8 +94,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'id': client[0],
                     'name': client[1],
                     'notes': client[2],
-                    'created_at': client[3].isoformat() if client[3] else None,
-                    'updated_at': client[4].isoformat() if client[4] else None,
+                    'status': client[3],
+                    'created_at': client[4].isoformat() if client[4] else None,
+                    'updated_at': client[5].isoformat() if client[5] else None,
                     'contacts': [
                         {
                             'id': c[0],
@@ -119,12 +120,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             else:
                 cur.execute(f"""
-                    SELECT c.id, c.name, c.notes, c.created_at,
+                    SELECT c.id, c.name, c.notes, c.status, c.created_at,
                            COUNT(cc.id) as contacts_count
                     FROM clients c
                     LEFT JOIN client_contacts cc ON c.id = cc.client_id
-                    WHERE c.company_id = {company_id} AND (c.notes IS NULL OR c.notes != 'DELETED')
-                    GROUP BY c.id, c.name, c.notes, c.created_at
+                    WHERE c.company_id = {company_id} AND c.status != 'removed'
+                    GROUP BY c.id, c.name, c.notes, c.status, c.created_at
                     ORDER BY c.created_at DESC
                 """)
                 
@@ -135,8 +136,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         'id': row[0],
                         'name': row[1],
                         'notes': row[2],
-                        'created_at': row[3].isoformat() if row[3] else None,
-                        'contacts_count': row[4]
+                        'status': row[3],
+                        'created_at': row[4].isoformat() if row[4] else None,
+                        'contacts_count': row[5]
                     }
                     for row in clients
                 ]
@@ -170,8 +172,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             notes_sql = escape_sql_string(notes) if notes else 'NULL'
             
             cur.execute(f"""
-                INSERT INTO clients (company_id, name, notes)
-                VALUES ({company_id}, {escape_sql_string(name)}, {notes_sql})
+                INSERT INTO clients (company_id, name, notes, status)
+                VALUES ({company_id}, {escape_sql_string(name)}, {notes_sql}, 'active')
                 RETURNING id
             """)
             
@@ -211,6 +213,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             client_id = body.get('id')
             name = body.get('name', '').strip()
             notes = body.get('notes', '').strip()
+            status = body.get('status', 'active')
             contacts = body.get('contacts', [])
             
             if not client_id or not name:
@@ -240,10 +243,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             notes_sql = escape_sql_string(notes) if notes else 'NULL'
             
+            if status not in ['active', 'archived', 'removed']:
+                status = 'active'
+            
             cur.execute(f"""
                 UPDATE clients 
                 SET name = {escape_sql_string(name)}, 
                     notes = {notes_sql},
+                    status = {escape_sql_string(status)},
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = {int(client_id)}
             """)
@@ -309,7 +316,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             
             cur.execute(f"""
-                SELECT id, notes FROM clients 
+                SELECT id, status FROM clients 
                 WHERE id = {int(client_id)} AND company_id = {company_id}
             """)
             
@@ -324,7 +331,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
-            if row[1] == 'DELETED':
+            if row[1] == 'removed':
                 cur.close()
                 conn.close()
                 return {
@@ -334,17 +341,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
-            # Сначала помечаем контакты
-            cur.execute(f"""
-                UPDATE client_contacts 
-                SET full_name = 'REMOVED_' || id::text
-                WHERE client_id = {int(client_id)}
-            """)
-            
-            # Затем помечаем клиента
             cur.execute(f"""
                 UPDATE clients 
-                SET notes = 'DELETED', updated_at = CURRENT_TIMESTAMP 
+                SET status = 'removed', updated_at = CURRENT_TIMESTAMP 
                 WHERE id = {int(client_id)}
             """)
             

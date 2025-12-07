@@ -35,6 +35,7 @@ interface Client {
   id?: number;
   name: string;
   notes: string;
+  status?: string;
   contacts: Contact[];
   contacts_count?: number;
   created_at?: string;
@@ -52,6 +53,7 @@ export default function Clients() {
   const [formData, setFormData] = useState<Client>({
     name: '',
     notes: '',
+    status: 'active',
     contacts: [{ full_name: '', position: '', phone: '', email: '' }]
   });
 
@@ -99,6 +101,7 @@ export default function Clients() {
         id: client.id,
         name: client.name,
         notes: client.notes || '',
+        status: client.status || 'active',
         contacts: client.contacts || [{ full_name: '', position: '', phone: '', email: '' }]
       });
     } else {
@@ -106,6 +109,7 @@ export default function Clients() {
       setFormData({
         name: '',
         notes: '',
+        status: 'active',
         contacts: [{ full_name: '', position: '', phone: '', email: '' }]
       });
     }
@@ -193,8 +197,56 @@ export default function Clients() {
     }
   };
 
+  const handleArchive = async (clientId: number) => {
+    if (!confirm('Переместить клиента в архив?')) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userId = localStorage.getItem('user_id');
+      const response = await fetch(API_URL, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userId || ''
+        },
+        body: JSON.stringify({
+          id: clientId,
+          name: clients.find(c => c.id === clientId)?.name || '',
+          status: 'archived'
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Успешно!',
+          description: 'Клиент перемещён в архив'
+        });
+        loadClients();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось архивировать клиента',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось связаться с сервером',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDelete = async (clientId: number) => {
-    if (!confirm('Вы уверены, что хотите удалить этого клиента?')) {
+    if (!confirm('Вы уверены, что хотите удалить этого клиента? Это действие нельзя отменить.')) {
       return;
     }
 
@@ -304,6 +356,7 @@ export default function Clients() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Название</TableHead>
+                  <TableHead>Статус</TableHead>
                   <TableHead>Примечания</TableHead>
                   <TableHead>Контактов</TableHead>
                   <TableHead>Дата создания</TableHead>
@@ -311,40 +364,61 @@ export default function Clients() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {client.notes ? (
-                        client.notes.length > 50 ? client.notes.substring(0, 50) + '...' : client.notes
-                      ) : (
-                        <span className="italic">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{client.contacts_count || 0}</TableCell>
-                    <TableCell>
-                      {client.created_at ? new Date(client.created_at).toLocaleDateString('ru-RU') : '—'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(client.id!)}
-                        >
-                          <Icon name="Eye" size={16} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(client.id!)}
-                        >
-                          <Icon name="Trash2" size={16} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {clients.map((client) => {
+                  const getStatusBadge = (status?: string) => {
+                    if (status === 'active') return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Активен</span>;
+                    if (status === 'archived') return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Архив</span>;
+                    return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Активен</span>;
+                  };
+
+                  return (
+                    <TableRow key={client.id}>
+                      <TableCell className="font-medium">{client.name}</TableCell>
+                      <TableCell>{getStatusBadge(client.status)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {client.notes ? (
+                          client.notes.length > 50 ? client.notes.substring(0, 50) + '...' : client.notes
+                        ) : (
+                          <span className="italic">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{client.contacts_count || 0}</TableCell>
+                      <TableCell>
+                        {client.created_at ? new Date(client.created_at).toLocaleDateString('ru-RU') : '—'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewDetails(client.id!)}
+                            title="Просмотр"
+                          >
+                            <Icon name="Eye" size={16} />
+                          </Button>
+                          {client.status === 'active' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleArchive(client.id!)}
+                              title="В архив"
+                            >
+                              <Icon name="Archive" size={16} />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(client.id!)}
+                            title="Удалить"
+                          >
+                            <Icon name="Trash2" size={16} />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -370,6 +444,19 @@ export default function Clients() {
                   placeholder="ООО «Название компании»"
                   required
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="status">Статус</Label>
+                <select
+                  id="status"
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="active">Активен</option>
+                  <option value="archived">Архив</option>
+                </select>
               </div>
 
               <div>
