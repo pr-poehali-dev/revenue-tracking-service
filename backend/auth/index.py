@@ -49,7 +49,7 @@ def send_verification_email(email: str, code: str) -> bool:
         
         msg.attach(MIMEText(html, 'html'))
         
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as server:
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
