@@ -182,6 +182,7 @@ export default function Clients() {
         body: JSON.stringify({
           id: clientId,
           name: clients.find(c => c.id === clientId)?.name || '',
+          notes: clients.find(c => c.id === clientId)?.notes || '',
           status: 'archived'
         })
       });
@@ -273,6 +274,7 @@ export default function Clients() {
         body: JSON.stringify({
           id: clientId,
           name: clients.find(c => c.id === clientId)?.name || '',
+          notes: clients.find(c => c.id === clientId)?.notes || '',
           status: 'active'
         })
       });
