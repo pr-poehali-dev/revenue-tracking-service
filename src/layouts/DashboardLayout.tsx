@@ -74,7 +74,24 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <p className="text-sm text-sidebar-foreground/60 mt-1">Управление выручкой</p>
         </div>
         
-        <div className="p-4 border-b border-sidebar-border">
+        <nav className="p-4 flex-1">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => navigate(item.path)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-all duration-200 ${
+                location.pathname === item.path
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+              }`}
+            >
+              <Icon name={item.icon} size={20} />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+        
+        <div className="p-4 border-t border-sidebar-border">
           <button
             onClick={() => navigate('/profile')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
@@ -97,33 +114,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </span>
               )}
             </div>
-          </button>
-        </div>
-        
-        <nav className="p-4 flex-1">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-all duration-200 ${
-                location.pathname === item.path
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-              }`}
-            >
-              <Icon name={item.icon} size={20} />
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        
-        <div className="p-4 border-t border-sidebar-border">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all duration-200"
-          >
-            <Icon name="LogOut" size={20} />
-            <span>Выйти</span>
           </button>
         </div>
       </aside>

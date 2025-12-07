@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import DashboardLayout from '@/layouts/DashboardLayout';
@@ -6,6 +7,8 @@ import AvatarSection from '@/components/profile/AvatarSection';
 import PersonalDataSection from '@/components/profile/PersonalDataSection';
 import EmailSection from '@/components/profile/EmailSection';
 import SecuritySection from '@/components/profile/SecuritySection';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const API_URL = 'https://functions.poehali.dev/ee2d3742-725a-421c-b7d0-8d2efc6c32db';
 
@@ -21,6 +24,7 @@ interface UserProfile {
 }
 
 export default function Profile() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -475,6 +479,28 @@ export default function Profile() {
           }}
           onChangePassword={handleChangePassword}
         />
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Icon name="LogOut" size={20} />
+              Выход из системы
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => {
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_id');
+                navigate('/login');
+              }}
+              variant="destructive"
+            >
+              <Icon name="LogOut" size={16} className="mr-2" />
+              Выйти из аккаунта
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
