@@ -1,0 +1,30 @@
+{
+  "tests": [
+    {
+      "name": "Get payments without auth",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "Требуется авторизация"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create payment without order",
+      "method": "POST",
+      "path": "/",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "body": {
+        "planned_amount": 1000
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "Заказ обязателен"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
 import Orders from "./pages/Orders";
+import Payments from "./pages/Payments";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/clients" element={<Clients />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/orders" element={<Orders />} />
+          <Route path="/payments" element={<Payments />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />
