@@ -13,11 +13,7 @@ from typing import Dict, Any
 def get_db_connection():
     return psycopg2.connect(os.environ['DATABASE_URL'])
 
-def get_schema_name(cur) -> str:
-    """Получить текущую схему БД"""
-    cur.execute("SELECT current_schema()")
-    schema = cur.fetchone()[0]
-    return schema if schema else 'public'
+# Используем таблицы без схемы - PostgreSQL найдёт их автоматически
 
 def escape_sql_string(s: str) -> str:
     """Экранирование строк для Simple Query Protocol"""
@@ -111,7 +107,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         conn = get_db_connection()
         cur = conn.cursor()
-        schema = get_schema_name(cur)
         
         if action == 'register':
             email = body.get('email', '')
@@ -133,7 +128,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             
             # Проверка существующего пользователя
-            cur.execute(f"SELECT id FROM {schema}.users WHERE email = {escape_sql_string(email)}")
+            cur.execute(f"SELECT id FROM users WHERE email = {escape_sql_string(email)}")
             if cur.fetchone():
                 cur.close()
                 conn.close()
@@ -152,7 +147,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             phone_sql = escape_sql_string(phone) if phone else 'NULL'
             
             cur.execute(f"""
-                INSERT INTO {schema}.users (email, password_hash, first_name, last_name, middle_name, phone, 
+                INSERT INTO users (email, password_hash, first_name, last_name, middle_name, phone, 
                                    email_verification_code, verification_code_expires_at)
                 VALUES ({escape_sql_string(email)}, {escape_sql_string(password_hash)}, 
                         {escape_sql_string(first_name)}, {escape_sql_string(last_name)}, 
@@ -163,11 +158,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             user_id = cur.fetchone()[0]
             
-            cur.execute(f"INSERT INTO {schema}.companies (name) VALUES ({escape_sql_string(company_name)}) RETURNING id")
+            cur.execute(f"INSERT INTO companies (name) VALUES ({escape_sql_string(company_name)}) RETURNING id")
             company_id = cur.fetchone()[0]
             
             cur.execute(f"""
-                INSERT INTO {schema}.company_users (company_id, user_id, role)
+                INSERT INTO company_users (company_id, user_id, role)
                 VALUES ({company_id}, {user_id}, 'owner')
             """)
             
@@ -214,7 +209,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             cur.execute(f"""
                 SELECT id, email_verification_code, verification_code_expires_at, is_email_verified
-                FROM {schema}.users WHERE email = {escape_sql_string(email)}
+                FROM users WHERE email = {escape_sql_string(email)}
             """)
             
             user = cur.fetchone()
@@ -261,7 +256,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             
             cur.execute(f"""
-                UPDATE {schema}.users SET is_email_verified = TRUE, 
+                UPDATE users SET is_email_verified = TRUE, 
                 email_verification_code = NULL, verification_code_expires_at = NULL
                 WHERE id = {user_id}
             """)
@@ -300,7 +295,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             password_hash = hash_password(password)
             
             cur.execute(f"""
-                SELECT id, is_email_verified FROM {schema}.users 
+                SELECT id, is_email_verified FROM users 
                 WHERE email = {escape_sql_string(email)} AND password_hash = {escape_sql_string(password_hash)}
             """)
             
