@@ -128,36 +128,36 @@ const Index = () => {
 
   const calculateMonthlyRevenue = (payments: any[]) => {
     const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear();
     const monthlyData: { [key: string]: { actual: number; planned: number } } = {};
 
-    for (let i = 0; i <= 5; i++) {
-      const date = new Date(currentYear, currentDate.getMonth() - i, 1);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      monthlyData[key] = { actual: 0, planned: 0 };
-    }
-
     payments.forEach(payment => {
+      const plannedAmount = payment.planned_amount || 
+        (payment.planned_amount_percent && payment.order_amount 
+          ? (payment.order_amount * payment.planned_amount_percent) / 100 
+          : 0);
+
+      if (payment.planned_date && plannedAmount > 0) {
+        const date = new Date(payment.planned_date);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (!monthlyData[key]) {
+          monthlyData[key] = { actual: 0, planned: 0 };
+        }
+        monthlyData[key].planned += plannedAmount;
+      }
+
       if (payment.actual_date && payment.actual_amount > 0) {
         const date = new Date(payment.actual_date);
         const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        if (monthlyData.hasOwnProperty(key)) {
-          monthlyData[key].actual += payment.actual_amount;
+        if (!monthlyData[key]) {
+          monthlyData[key] = { actual: 0, planned: 0 };
         }
-      }
-      
-      if (payment.planned_date && !payment.actual_date) {
-        const plannedAmount = payment.planned_amount || 
-          (payment.planned_amount_percent && payment.order_amount 
-            ? (payment.order_amount * payment.planned_amount_percent) / 100 
-            : 0);
+        monthlyData[key].actual += payment.actual_amount;
         
-        if (plannedAmount > 0) {
-          const date = new Date(payment.planned_date);
-          const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-          if (monthlyData.hasOwnProperty(key)) {
-            monthlyData[key].planned += plannedAmount;
+        if (payment.planned_date) {
+          const plannedDate = new Date(payment.planned_date);
+          const plannedKey = `${plannedDate.getFullYear()}-${String(plannedDate.getMonth() + 1).padStart(2, '0')}`;
+          if (monthlyData[plannedKey] && plannedAmount > 0) {
+            monthlyData[plannedKey].planned = Math.max(0, monthlyData[plannedKey].planned - plannedAmount);
           }
         }
       }
@@ -257,27 +257,31 @@ const Index = () => {
                     </div>
                     <div className="w-full bg-secondary rounded-full h-2 overflow-hidden relative">
                       <div
-                        className="bg-green-600 h-full rounded-full transition-all duration-500 ease-out absolute"
-                        style={{ width: `${(item.actual / maxRevenue) * 100}%` }}
-                      />
-                      <div
-                        className="bg-blue-400/40 h-full rounded-full transition-all duration-500 ease-out absolute"
+                        className="bg-blue-400 h-full rounded-full transition-all duration-500 ease-out absolute"
                         style={{ 
                           width: `${((item.actual + item.planned) / maxRevenue) * 100}%`,
                           left: 0
                         }}
                       />
+                      <div
+                        className="bg-green-600 h-full rounded-full transition-all duration-500 ease-out absolute z-10"
+                        style={{ width: `${(item.actual / maxRevenue) * 100}%` }}
+                      />
                     </div>
-                    {item.planned > 0 && (
+                    {(item.actual > 0 || item.planned > 0) && (
                       <div className="flex gap-4 text-xs">
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 rounded-full bg-green-600"></div>
-                          <span className="text-muted-foreground">Фактическая</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 rounded-full bg-blue-400/40"></div>
-                          <span className="text-muted-foreground">Планируемая</span>
-                        </div>
+                        {item.actual > 0 && (
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 rounded-full bg-green-600"></div>
+                            <span className="text-muted-foreground">Фактическая</span>
+                          </div>
+                        )}
+                        {item.planned > 0 && (
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 rounded-full bg-blue-400"></div>
+                            <span className="text-muted-foreground">Планируемая</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
