@@ -1,0 +1,495 @@
+import json
+import os
+import psycopg2
+import hashlib
+import secrets
+import base64
+import boto3
+from datetime import datetime, timedelta
+from typing import Dict, Any
+
+def get_db_connection():
+    return psycopg2.connect(os.environ['DATABASE_URL'])
+
+def escape_sql_string(s: str) -> str:
+    if s is None:
+        return 'NULL'
+    return "'" + s.replace("'", "''") + "'"
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def generate_verification_code() -> str:
+    return ''.join([str(secrets.randbelow(10)) for _ in range(4)])
+
+def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """
+    Управление профилем пользователя: получение данных, обновление, смена пароля, смена email
+    Args: event - HTTP запрос с методами GET/PUT/POST
+          context - контекст выполнения функции
+    Returns: JSON с результатом операции
+    """
+    method = event.get('httpMethod', 'GET')
+    
+    if method == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id',
+                'Access-Control-Max-Age': '86400'
+            },
+            'body': '',
+            'isBase64Encoded': False
+        }
+    
+    try:
+        headers = event.get('headers', {})
+        user_id = headers.get('X-User-Id') or headers.get('x-user-id')
+        
+        if not user_id:
+            return {
+                'statusCode': 401,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Требуется авторизация'}),
+                'isBase64Encoded': False
+            }
+        
+        user_id = int(user_id)
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        if method == 'GET':
+            query_params = event.get('queryStringParameters') or {}
+            action = query_params.get('action')
+            
+            if action == 'verify_email':
+                code = query_params.get('code')
+                if not code:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Код не указан'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cur.execute(f"""
+                    SELECT email_verification_code, verification_code_expires_at, email
+                    FROM users
+                    WHERE id = {user_id}
+                """)
+                
+                user = cur.fetchone()
+                if not user or not user[0]:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Код не найден'}),
+                        'isBase64Encoded': False
+                    }
+                
+                if datetime.now() > user[1]:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Код истек'}),
+                        'isBase64Encoded': False
+                    }
+                
+                if user[0] != code:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Неверный код'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cur.execute(f"""
+                    UPDATE users
+                    SET is_email_verified = TRUE,
+                        email_verification_code = NULL,
+                        verification_code_expires_at = NULL,
+                        updated_at = NOW()
+                    WHERE id = {user_id}
+                """)
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'message': 'Email подтвержден'}),
+                    'isBase64Encoded': False
+                }
+            else:
+                cur.execute(f"""
+                    SELECT id, email, first_name, last_name, middle_name, phone, 
+                           avatar_url, is_email_verified, created_at
+                    FROM users
+                    WHERE id = {user_id}
+                """)
+                
+                user = cur.fetchone()
+                if not user:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 404,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Пользователь не найден'}),
+                        'isBase64Encoded': False
+                    }
+                
+                result = {
+                    'id': user[0],
+                    'email': user[1],
+                    'first_name': user[2],
+                    'last_name': user[3],
+                    'middle_name': user[4],
+                    'phone': user[5],
+                    'avatar_url': user[6],
+                    'is_email_verified': user[7],
+                    'created_at': user[8].isoformat() if user[8] else None
+                }
+                
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps(result),
+                    'isBase64Encoded': False
+                }
+        
+        elif method == 'PUT':
+            body = json.loads(event.get('body', '{}'))
+            action = body.get('action')
+            
+            if action == 'update_profile':
+                first_name = body.get('first_name')
+                last_name = body.get('last_name')
+                middle_name = body.get('middle_name')
+                phone = body.get('phone')
+                
+                if not first_name or not last_name:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Имя и фамилия обязательны'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cur.execute(f"""
+                    UPDATE users
+                    SET first_name = {escape_sql_string(first_name)},
+                        last_name = {escape_sql_string(last_name)},
+                        middle_name = {escape_sql_string(middle_name) if middle_name else 'NULL'},
+                        phone = {escape_sql_string(phone) if phone else 'NULL'},
+                        updated_at = NOW()
+                    WHERE id = {user_id}
+                """)
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'message': 'Профиль обновлен'}),
+                    'isBase64Encoded': False
+                }
+            
+            elif action == 'change_password':
+                new_password = body.get('new_password')
+                
+                if not new_password or len(new_password) < 6:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Пароль должен быть не менее 6 символов'}),
+                        'isBase64Encoded': False
+                    }
+                
+                password_hash = hash_password(new_password)
+                
+                cur.execute(f"""
+                    UPDATE users
+                    SET password_hash = {escape_sql_string(password_hash)},
+                        updated_at = NOW()
+                    WHERE id = {user_id}
+                """)
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'message': 'Пароль изменен'}),
+                    'isBase64Encoded': False
+                }
+            
+            elif action == 'request_email_change':
+                new_email = body.get('new_email')
+                
+                if not new_email:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Email обязателен'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cur.execute(f"SELECT id FROM users WHERE email = {escape_sql_string(new_email)} AND id != {user_id}")
+                if cur.fetchone():
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Email уже используется'}),
+                        'isBase64Encoded': False
+                    }
+                
+                code = generate_verification_code()
+                expires_at = datetime.now() + timedelta(minutes=10)
+                
+                cur.execute(f"""
+                    UPDATE users
+                    SET email_verification_code = {escape_sql_string(code)},
+                        verification_code_expires_at = {escape_sql_string(expires_at.isoformat())}
+                    WHERE id = {user_id}
+                """)
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({
+                        'message': f'Код отправлен на {new_email}',
+                        'code': code,
+                        'new_email': new_email
+                    }),
+                    'isBase64Encoded': False
+                }
+            
+            else:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Неизвестное действие'}),
+                    'isBase64Encoded': False
+                }
+        
+        elif method == 'POST':
+            body = json.loads(event.get('body', '{}'))
+            action = body.get('action')
+            
+            if action == 'upload_avatar':
+                image_base64 = body.get('image')
+                
+                if not image_base64:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Изображение не передано'}),
+                        'isBase64Encoded': False
+                    }
+                
+                try:
+                    image_data = base64.b64decode(image_base64)
+                    
+                    s3 = boto3.client('s3',
+                        endpoint_url='https://bucket.poehali.dev',
+                        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+                    )
+                    
+                    filename = f"avatars/user_{user_id}_{int(datetime.now().timestamp())}.jpg"
+                    
+                    s3.put_object(
+                        Bucket='files',
+                        Key=filename,
+                        Body=image_data,
+                        ContentType='image/jpeg'
+                    )
+                    
+                    avatar_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{filename}"
+                    
+                    cur.execute(f"""
+                        UPDATE users
+                        SET avatar_url = {escape_sql_string(avatar_url)},
+                            updated_at = NOW()
+                        WHERE id = {user_id}
+                    """)
+                    
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                    
+                    return {
+                        'statusCode': 200,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({
+                            'message': 'Аватар загружен',
+                            'avatar_url': avatar_url
+                        }),
+                        'isBase64Encoded': False
+                    }
+                    
+                except Exception as e:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 500,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': f'Ошибка загрузки: {str(e)}'}),
+                        'isBase64Encoded': False
+                    }
+            
+            elif action == 'delete_avatar':
+                cur.execute(f"""
+                    UPDATE users
+                    SET avatar_url = NULL,
+                        updated_at = NOW()
+                    WHERE id = {user_id}
+                """)
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'message': 'Аватар удален'}),
+                    'isBase64Encoded': False
+                }
+            
+            elif action == 'confirm_email_change':
+                code = body.get('code')
+                new_email = body.get('new_email')
+                
+                if not code or not new_email:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Код и email обязательны'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cur.execute(f"""
+                    SELECT email_verification_code, verification_code_expires_at
+                    FROM users
+                    WHERE id = {user_id}
+                """)
+                
+                user = cur.fetchone()
+                if not user or not user[0]:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Код не найден'}),
+                        'isBase64Encoded': False
+                    }
+                
+                if datetime.now() > user[1]:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Код истек'}),
+                        'isBase64Encoded': False
+                    }
+                
+                if user[0] != code:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Неверный код'}),
+                        'isBase64Encoded': False
+                    }
+                
+                cur.execute(f"""
+                    UPDATE users
+                    SET email = {escape_sql_string(new_email)},
+                        is_email_verified = TRUE,
+                        email_verification_code = NULL,
+                        verification_code_expires_at = NULL,
+                        updated_at = NOW()
+                    WHERE id = {user_id}
+                """)
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'message': 'Email изменен'}),
+                    'isBase64Encoded': False
+                }
+            
+            else:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Неизвестное действие'}),
+                    'isBase64Encoded': False
+                }
+        
+        else:
+            cur.close()
+            conn.close()
+            return {
+                'statusCode': 405,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Метод не поддерживается'}),
+                'isBase64Encoded': False
+            }
+    
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': f'Внутренняя ошибка: {str(e)}'}),
+            'isBase64Encoded': False
+        }
