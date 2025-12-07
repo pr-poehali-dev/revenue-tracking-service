@@ -72,9 +72,14 @@ const Register = () => {
       const data = await response.json();
       
       if (response.ok && data.success) {
+        const description = data.email_sent 
+          ? 'Код подтверждения отправлен на вашу почту'
+          : `Код подтверждения: ${data.code}`;
+        
         toast({
           title: 'Успешно!',
-          description: 'Код подтверждения отправлен на вашу почту'
+          description: description,
+          duration: data.email_sent ? 3000 : 10000
         });
         setStep('verify');
       } else {

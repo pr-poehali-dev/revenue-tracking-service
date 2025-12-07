@@ -166,19 +166,27 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             conn.commit()
             
-            email_sent = send_verification_email(email, code)
+            # Отправка email не должна ломать процесс регистрации
+            email_sent = False
+            try:
+                email_sent = send_verification_email(email, code)
+            except Exception as email_error:
+                print(f"Failed to send email: {email_error}")
             
             cur.close()
             conn.close()
+            
+            message = 'Код подтверждения отправлен на email' if email_sent else f'Регистрация завершена. Код подтверждения: {code}'
             
             return {
                 'statusCode': 200,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
                 'body': json.dumps({
                     'success': True,
-                    'message': 'Код подтверждения отправлен на email',
+                    'message': message,
                     'email_sent': email_sent,
-                    'user_id': user_id
+                    'user_id': user_id,
+                    'code': code if not email_sent else None
                 }),
                 'isBase64Encoded': False
             }
