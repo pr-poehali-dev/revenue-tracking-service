@@ -48,6 +48,7 @@ export default function Clients() {
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [viewMode, setViewMode] = useState<'active' | 'archived'>('active');
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<Client>({
@@ -59,13 +60,13 @@ export default function Clients() {
 
   useEffect(() => {
     loadClients();
-  }, []);
+  }, [viewMode]);
 
   const loadClients = async () => {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
-      const response = await fetch(API_URL, {
+      const response = await fetch(`${API_URL}?status=${viewMode}`, {
         method: 'GET',
         headers: {
           'X-User-Id': userId || ''
@@ -226,6 +227,7 @@ export default function Clients() {
           title: 'Успешно!',
           description: 'Клиент перемещён в архив'
         });
+        setViewMode('active');
         loadClients();
       } else {
         toast({
@@ -287,6 +289,54 @@ export default function Clients() {
     }
   };
 
+  const handleActivate = async (clientId: number) => {
+    if (!confirm('Вернуть клиента в активный статус?')) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userId = localStorage.getItem('user_id');
+      const response = await fetch(API_URL, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userId || ''
+        },
+        body: JSON.stringify({
+          id: clientId,
+          name: clients.find(c => c.id === clientId)?.name || '',
+          status: 'active'
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Успешно!',
+          description: 'Клиент возвращён в активные'
+        });
+        loadClients();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось активировать клиента',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось связаться с сервером',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleViewDetails = async (clientId: number) => {
     setLoading(true);
     try {
@@ -328,10 +378,28 @@ export default function Clients() {
             <h2 className="text-3xl font-bold text-foreground">Клиенты</h2>
             <p className="text-muted-foreground mt-1">Управление базой клиентов компании</p>
           </div>
-          <Button onClick={() => handleOpenDialog()} disabled={loading}>
-            <Icon name="Plus" size={20} className="mr-2" />
-            Добавить клиента
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === 'active' ? 'default' : 'outline'}
+              onClick={() => setViewMode('active')}
+              disabled={loading}
+            >
+              Активные
+            </Button>
+            <Button
+              variant={viewMode === 'archived' ? 'default' : 'outline'}
+              onClick={() => setViewMode('archived')}
+              disabled={loading}
+            >
+              Архив
+            </Button>
+            {viewMode === 'active' && (
+              <Button onClick={() => handleOpenDialog()} disabled={loading}>
+                <Icon name="Plus" size={20} className="mr-2" />
+                Добавить клиента
+              </Button>
+            )}
+          </div>
         </div>
 
       <Card>
@@ -356,7 +424,6 @@ export default function Clients() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Название</TableHead>
-                  <TableHead>Статус</TableHead>
                   <TableHead>Примечания</TableHead>
                   <TableHead>Контактов</TableHead>
                   <TableHead>Дата создания</TableHead>
@@ -364,17 +431,9 @@ export default function Clients() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.map((client) => {
-                  const getStatusBadge = (status?: string) => {
-                    if (status === 'active') return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Активен</span>;
-                    if (status === 'archived') return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Архив</span>;
-                    return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Активен</span>;
-                  };
-
-                  return (
+                {clients.map((client) => (
                     <TableRow key={client.id}>
                       <TableCell className="font-medium">{client.name}</TableCell>
-                      <TableCell>{getStatusBadge(client.status)}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {client.notes ? (
                           client.notes.length > 50 ? client.notes.substring(0, 50) + '...' : client.notes
@@ -396,7 +455,7 @@ export default function Clients() {
                           >
                             <Icon name="Eye" size={16} />
                           </Button>
-                          {client.status === 'active' && (
+                          {viewMode === 'active' && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -404,6 +463,16 @@ export default function Clients() {
                               title="В архив"
                             >
                               <Icon name="Archive" size={16} />
+                            </Button>
+                          )}
+                          {viewMode === 'archived' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleActivate(client.id!)}
+                              title="Вернуть в активные"
+                            >
+                              <Icon name="ArchiveRestore" size={16} />
                             </Button>
                           )}
                           <Button
@@ -417,8 +486,7 @@ export default function Clients() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
+                  ))
               </TableBody>
             </Table>
           )}

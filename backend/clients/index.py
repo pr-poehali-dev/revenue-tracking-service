@@ -63,6 +63,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if method == 'GET':
             query_params = event.get('queryStringParameters') or {}
             client_id = query_params.get('id')
+            status_filter = query_params.get('status', 'active')
             
             if client_id:
                 cur.execute(f"""
@@ -119,12 +120,15 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             else:
+                if status_filter not in ['active', 'archived']:
+                    status_filter = 'active'
+                
                 cur.execute(f"""
                     SELECT c.id, c.name, c.notes, c.status, c.created_at,
                            COUNT(cc.id) as contacts_count
                     FROM clients c
                     LEFT JOIN client_contacts cc ON c.id = cc.client_id
-                    WHERE c.company_id = {company_id} AND c.status != 'removed'
+                    WHERE c.company_id = {company_id} AND c.status = {escape_sql_string(status_filter)}
                     GROUP BY c.id, c.name, c.notes, c.status, c.created_at
                     ORDER BY c.created_at DESC
                 """)
