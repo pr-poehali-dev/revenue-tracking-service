@@ -14,40 +14,177 @@ import {
 import { Badge } from '@/components/ui/badge';
 import DashboardLayout from '@/layouts/DashboardLayout';
 
+const CLIENTS_API_URL = 'https://functions.poehali.dev/c1ed6936-95c5-4b22-a918-72cc11832898';
+const PROJECTS_API_URL = 'https://functions.poehali.dev/5741ba68-de8d-41af-bdef-39c18cc09090';
+const ORDERS_API_URL = 'https://functions.poehali.dev/6ed190b1-80de-4d7b-8046-a6fc234c502c';
+const PAYMENTS_API_URL = 'https://functions.poehali.dev/1296228e-b15c-463a-9267-4c510ee723b2';
+
 const Index = () => {
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    activeProjects: 0,
+    totalClients: 0,
+    totalOrders: 0
+  });
+  const [revenueByMonth, setRevenueByMonth] = useState<{ month: string; revenue: number }[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [recentPayments, setRecentPayments] = useState<any[]>([]);
 
-  const stats = [
-    { title: 'Общая выручка', value: '12 450 000 ₽', change: '+12.5%', icon: 'TrendingUp', trend: 'up' },
-    { title: 'Активные проекты', value: '24', change: '+3', icon: 'Briefcase', trend: 'up' },
-    { title: 'Клиентов', value: '18', change: '+2', icon: 'Users', trend: 'up' },
-    { title: 'Средний чек', value: '518 750 ₽', change: '+8.3%', icon: 'DollarSign', trend: 'up' },
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+    loadDashboardData();
+  }, [navigate]);
+
+  const loadDashboardData = async () => {
+    const userId = localStorage.getItem('user_id');
+    if (!userId) return;
+
+    try {
+      await Promise.all([
+        loadClients(userId),
+        loadProjects(userId),
+        loadOrders(userId),
+        loadPayments(userId)
+      ]);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    }
+  };
+
+  const loadClients = async (userId: string) => {
+    try {
+      const response = await fetch(`${CLIENTS_API_URL}?status=active`, {
+        headers: { 'X-User-Id': userId }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setStats(prev => ({ ...prev, totalClients: data.clients?.length || 0 }));
+      }
+    } catch (error) {
+      console.error('Failed to load clients:', error);
+    }
+  };
+
+  const loadProjects = async (userId: string) => {
+    try {
+      const response = await fetch(`${PROJECTS_API_URL}?status=active`, {
+        headers: { 'X-User-Id': userId }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setStats(prev => ({ ...prev, activeProjects: data.projects?.length || 0 }));
+      }
+    } catch (error) {
+      console.error('Failed to load projects:', error);
+    }
+  };
+
+  const loadOrders = async (userId: string) => {
+    try {
+      const response = await fetch(`${ORDERS_API_URL}?status=active`, {
+        headers: { 'X-User-Id': userId }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setOrders(data.orders || []);
+        setStats(prev => ({ ...prev, totalOrders: data.orders?.length || 0 }));
+      }
+    } catch (error) {
+      console.error('Failed to load orders:', error);
+    }
+  };
+
+  const loadPayments = async (userId: string) => {
+    try {
+      const response = await fetch(`${PAYMENTS_API_URL}?status=active`, {
+        headers: { 'X-User-Id': userId }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const payments = data.payments || [];
+        
+        const paidPayments = payments.filter((p: any) => p.actual_date && p.actual_amount > 0);
+        
+        const totalRevenue = paidPayments.reduce((sum: number, p: any) => sum + (p.actual_amount || 0), 0);
+        setStats(prev => ({ ...prev, totalRevenue }));
+        
+        const monthlyRevenue = calculateMonthlyRevenue(paidPayments);
+        setRevenueByMonth(monthlyRevenue);
+        
+        const sortedPayments = [...paidPayments]
+          .sort((a, b) => new Date(b.actual_date).getTime() - new Date(a.actual_date).getTime())
+          .slice(0, 5);
+        setRecentPayments(sortedPayments);
+      }
+    } catch (error) {
+      console.error('Failed to load payments:', error);
+    }
+  };
+
+  const calculateMonthlyRevenue = (payments: any[]) => {
+    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const monthlyData: { [key: string]: number } = {};
+
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(currentYear, currentDate.getMonth() - i, 1);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      monthlyData[key] = 0;
+    }
+
+    payments.forEach(payment => {
+      if (payment.actual_date && payment.actual_amount > 0) {
+        const date = new Date(payment.actual_date);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (monthlyData.hasOwnProperty(key)) {
+          monthlyData[key] += payment.actual_amount;
+        }
+      }
+    });
+
+    return Object.entries(monthlyData).map(([key, revenue]) => {
+      const [year, month] = key.split('-');
+      return {
+        month: monthNames[parseInt(month) - 1],
+        revenue
+      };
+    });
+  };
+
+  const maxRevenue = Math.max(...revenueByMonth.map(m => m.revenue), 1);
+
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('ru-RU', {
+      style: 'currency',
+      currency: 'RUB',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const getOrderStatusBadge = (status: string) => {
+    const statuses: { [key: string]: { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } } = {
+      new: { label: 'Новый', variant: 'default' },
+      in_progress: { label: 'В работе', variant: 'secondary' },
+      completed: { label: 'Работы выполнены', variant: 'outline' },
+      done: { label: 'Завершён', variant: 'secondary' }
+    };
+    const statusInfo = statuses[status] || { label: status, variant: 'outline' };
+    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+  };
+
+  const statsCards = [
+    { title: 'Общая выручка', value: formatAmount(stats.totalRevenue), icon: 'TrendingUp' },
+    { title: 'Активные проекты', value: stats.activeProjects.toString(), icon: 'Briefcase' },
+    { title: 'Клиентов', value: stats.totalClients.toString(), icon: 'Users' },
+    { title: 'Заказов', value: stats.totalOrders.toString(), icon: 'ShoppingCart' },
   ];
-
-  const revenueByMonth = [
-    { month: 'Январь', revenue: 850000 },
-    { month: 'Февраль', revenue: 920000 },
-    { month: 'Март', revenue: 1100000 },
-    { month: 'Апрель', revenue: 1050000 },
-    { month: 'Май', revenue: 1200000 },
-    { month: 'Июнь', revenue: 1450000 },
-  ];
-
-  const maxRevenue = Math.max(...revenueByMonth.map(m => m.revenue));
-
-  const projects = [
-    { id: 1, name: 'CRM Система', client: 'ООО "ТехноЛайн"', status: 'active', revenue: 2400000, progress: 75 },
-    { id: 2, name: 'Мобильное приложение', client: 'ИП Иванов', status: 'active', revenue: 1800000, progress: 45 },
-    { id: 3, name: 'Интернет-магазин', client: 'ООО "РосТорг"', status: 'active', revenue: 3200000, progress: 90 },
-    { id: 4, name: 'Корп. портал', client: 'АО "ПромСтрой"', status: 'completed', revenue: 1500000, progress: 100 },
-  ];
-
-  const recentPayments = [
-    { id: 1, client: 'ООО "ТехноЛайн"', amount: 400000, date: '2025-12-05', project: 'CRM Система' },
-    { id: 2, client: 'ООО "РосТорг"', amount: 600000, date: '2025-12-03', project: 'Интернет-магазин' },
-    { id: 3, client: 'ИП Иванов', amount: 300000, date: '2025-12-01', project: 'Мобильное приложение' },
-  ];
-
-
 
   return (
     <DashboardLayout>
@@ -56,43 +193,44 @@ const Index = () => {
         <p className="text-muted-foreground">Обзор ключевых показателей компании</p>
       </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Icon name={stat.icon} size={20} className="text-primary" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground mb-1">{stat.value}</div>
-                <p className="text-xs text-green-600 flex items-center gap-1">
-                  <Icon name="ArrowUp" size={14} />
-                  {stat.change} за месяц
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Icon name="TrendingUp" size={20} />
-                Динамика выручки
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {statsCards.map((stat, index) => (
+          <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {stat.title}
               </CardTitle>
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Icon name={stat.icon} size={20} className="text-primary" />
+              </div>
             </CardHeader>
             <CardContent>
+              <div className="text-2xl font-bold text-foreground mb-1">{stat.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Icon name="TrendingUp" size={20} />
+              Динамика выручки
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {revenueByMonth.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Нет данных о платежах
+              </div>
+            ) : (
               <div className="space-y-4">
                 {revenueByMonth.map((item, index) => (
                   <div key={index} className="space-y-2">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground font-medium">{item.month}</span>
-                      <span className="font-semibold">{item.revenue.toLocaleString('ru-RU')} ₽</span>
+                      <span className="font-semibold">{formatAmount(item.revenue)}</span>
                     </div>
                     <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
                       <div
@@ -103,59 +241,70 @@ const Index = () => {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Icon name="Briefcase" size={20} />
-                Активные проекты
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {projects.slice(0, 4).map((project) => (
-                  <div key={project.id} className="space-y-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-semibold text-sm">{project.name}</p>
-                        <p className="text-xs text-muted-foreground">{project.client}</p>
-                      </div>
-                      <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                        {project.status === 'active' ? 'Активен' : 'Завершён'}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground">Прогресс: {project.progress}%</span>
-                      <span className="font-semibold">{project.revenue.toLocaleString('ru-RU')} ₽</span>
-                    </div>
-                    <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="bg-primary h-full rounded-full transition-all duration-500"
-                        style={{ width: `${project.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Icon name="CreditCard" size={20} />
-              Последние платежи
+              <Icon name="ShoppingCart" size={20} />
+              Активные заказы
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {orders.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Icon name="ShoppingCart" size={48} className="mx-auto mb-4 opacity-50" />
+                <p>Активных заказов нет</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders.slice(0, 5).map((order) => (
+                  <div key={order.id} className="space-y-2 pb-4 border-b last:border-b-0">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-sm">{order.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {order.project_name}
+                          {order.client_name && ` • ${order.client_name}`}
+                        </p>
+                      </div>
+                      {getOrderStatusBadge(order.order_status)}
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">
+                        {order.planned_date && `До ${new Date(order.planned_date).toLocaleDateString('ru-RU')}`}
+                      </span>
+                      <span className="font-semibold">{formatAmount(order.amount)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Icon name="CreditCard" size={20} />
+            Последние платежи
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentPayments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Icon name="CreditCard" size={48} className="mx-auto mb-4 opacity-50" />
+              <p>Платежей пока нет</p>
+            </div>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Клиент</TableHead>
-                  <TableHead>Проект</TableHead>
+                  <TableHead>Заказ</TableHead>
+                  <TableHead>Проект / Клиент</TableHead>
                   <TableHead>Дата</TableHead>
                   <TableHead className="text-right">Сумма</TableHead>
                 </TableRow>
@@ -163,18 +312,24 @@ const Index = () => {
               <TableBody>
                 {recentPayments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell className="font-medium">{payment.client}</TableCell>
-                    <TableCell className="text-muted-foreground">{payment.project}</TableCell>
+                    <TableCell className="font-medium">{payment.order_name || '—'}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(payment.date).toLocaleDateString('ru-RU')}
+                      <div>
+                        {payment.project_name && <div className="text-sm">{payment.project_name}</div>}
+                        {payment.client_name && <div className="text-xs">{payment.client_name}</div>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {payment.actual_date ? new Date(payment.actual_date).toLocaleDateString('ru-RU') : '—'}
                     </TableCell>
                     <TableCell className="text-right font-semibold">
-                      {payment.amount.toLocaleString('ru-RU')} ₽
+                      {formatAmount(payment.actual_amount)}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          )}
         </CardContent>
       </Card>
     </DashboardLayout>
