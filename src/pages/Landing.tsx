@@ -74,12 +74,6 @@ const Landing = () => {
                 <Icon name="ArrowRight" className="ml-2" size={20} />
               </Button>
             </Link>
-            <Link to="/login">
-              <Button size="lg" variant="outline" className="text-lg px-8">
-                Войти в систему
-                <Icon name="LogIn" className="ml-2" size={20} />
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
