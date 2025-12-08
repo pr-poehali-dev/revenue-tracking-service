@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +18,7 @@ interface Project {
 }
 
 export default function Orders() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,6 +50,19 @@ export default function Orders() {
     try {
       const userId = localStorage.getItem('user_id');
       const companyId = localStorage.getItem('company_id');
+
+      console.log('Loading orders with:', { userId, companyId });
+
+      if (!userId || !companyId) {
+        toast({
+          title: 'Ошибка авторизации',
+          description: 'Пожалуйста, войдите в систему заново',
+          variant: 'destructive'
+        });
+        setTimeout(() => navigate('/login'), 1500);
+        return;
+      }
+      
       const url = `${API_URL}?status=${viewMode}`;
       
       const response = await fetch(url, {

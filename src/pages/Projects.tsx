@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +17,7 @@ interface Client {
 }
 
 export default function Projects() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,6 +43,19 @@ export default function Projects() {
     try {
       const userId = localStorage.getItem('user_id');
       const companyId = localStorage.getItem('company_id');
+
+      console.log('Loading projects with:', { userId, companyId });
+
+      if (!userId || !companyId) {
+        toast({
+          title: 'Ошибка авторизации',
+          description: 'Пожалуйста, войдите в систему заново',
+          variant: 'destructive'
+        });
+        setTimeout(() => navigate('/login'), 1500);
+        return;
+      }
+      
       const response = await fetch(`${API_URL}?status=${viewMode}`, {
         method: 'GET',
         headers: {

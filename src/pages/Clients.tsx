@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
@@ -10,6 +11,7 @@ import { Client, Contact } from './Clients/types';
 const API_URL = 'https://functions.poehali.dev/c1ed6936-95c5-4b22-a918-72cc11832898';
 
 export default function Clients() {
+  const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -33,6 +35,19 @@ export default function Clients() {
     try {
       const userId = localStorage.getItem('user_id');
       const companyId = localStorage.getItem('company_id');
+
+      console.log('Loading clients with:', { userId, companyId });
+
+      if (!userId || !companyId) {
+        toast({
+          title: 'Ошибка авторизации',
+          description: 'Пожалуйста, войдите в систему заново',
+          variant: 'destructive'
+        });
+        setTimeout(() => navigate('/login'), 1500);
+        return;
+      }
+      
       const response = await fetch(`${API_URL}?status=${viewMode}`, {
         method: 'GET',
         headers: {
