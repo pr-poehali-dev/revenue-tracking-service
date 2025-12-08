@@ -19,7 +19,7 @@ const API_URL = 'https://functions.poehali.dev/ee2d3742-725a-421c-b7d0-8d2efc6c3
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [userProfile, setUserProfile] = useState<{ avatar_url?: string; first_name: string; last_name: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ avatar_url?: string; first_name: string; last_name: string; current_company_id?: number; companies?: { id: number; name: string }[] } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -108,11 +108,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-start">
-              <span className="text-sm font-medium">Профиль</span>
               {userProfile && (
-                <span className="text-xs opacity-70">
-                  {userProfile.first_name} {userProfile.last_name}
-                </span>
+                <>
+                  <span className="text-sm font-medium">
+                    {userProfile.first_name} {userProfile.last_name}
+                  </span>
+                  <span className="text-xs opacity-70">
+                    {userProfile.companies?.find(c => c.id === userProfile.current_company_id)?.name || 'Компания'}
+                  </span>
+                </>
               )}
             </div>
           </button>
