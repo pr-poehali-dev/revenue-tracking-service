@@ -334,10 +334,12 @@ export default function Clients() {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${API_URL}?id=${clientId}`, {
         method: 'GET',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 

@@ -368,10 +368,12 @@ export default function Payments() {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${API_URL}?id=${paymentId}`, {
         method: 'GET',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 
