@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,13 @@ const Register = () => {
   const { toast } = useToast();
   const [step, setStep] = useState<'register' | 'verify'>('register');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
   
   const [formData, setFormData] = useState({
     company_name: '',
