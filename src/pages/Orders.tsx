@@ -221,12 +221,14 @@ export default function Orders() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const order = orders.find(o => o.id === orderId);
       const response = await fetch(API_URL, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         },
         body: JSON.stringify({
           id: orderId,
@@ -377,10 +379,12 @@ export default function Orders() {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${API_URL}?id=${orderId}`, {
         method: 'GET',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 
