@@ -43,9 +43,9 @@ const Landing = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Icon name="Briefcase" className="text-primary-foreground" size={24} />
+              <Icon name="BarChart3" className="text-primary-foreground" size={24} />
             </div>
-            <span className="text-xl font-bold text-foreground">BusinessHub</span>
+            <span className="text-xl font-bold text-foreground">Revenue Track</span>
           </div>
           <div className="flex items-center gap-4">
             <Link to="/login">
@@ -151,12 +151,12 @@ const Landing = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Icon name="Briefcase" className="text-primary-foreground" size={18} />
+                <Icon name="BarChart3" className="text-primary-foreground" size={18} />
               </div>
-              <span className="font-bold text-foreground">BusinessHub</span>
+              <span className="font-bold text-foreground">Revenue Track</span>
             </div>
             <p className="text-muted-foreground text-sm">
-              © 2024 BusinessHub. Все права защищены.
+              © 2024 Revenue Track. Все права защищены.
             </p>
           </div>
         </div>

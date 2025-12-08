@@ -155,8 +155,8 @@ const Register = () => {
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2 mb-2">
-            <Icon name="Briefcase" size={32} className="text-primary" />
-            BusinessHub
+            <Icon name="BarChart3" size={32} className="text-primary" />
+            Revenue Track
           </h1>
           <p className="text-muted-foreground">
             {step === 'register' ? 'Регистрация нового аккаунта' : 'Подтверждение email'}
