@@ -37,7 +37,7 @@ const Index = () => {
       navigate('/login');
       return;
     }
-    loadDashboardData();
+    navigate('/dashboard');
   }, [navigate]);
 
   const loadDashboardData = async () => {
