@@ -131,7 +131,7 @@ const Register = () => {
           description: 'Регистрация успешно завершена'
         });
         
-        setTimeout(() => navigate('/'), 1000);
+        setTimeout(() => navigate('/dashboard'), 1000);
       } else {
         toast({
           title: 'Ошибка',
@@ -155,8 +155,8 @@ const Register = () => {
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2 mb-2">
-            <Icon name="BarChart3" size={32} className="text-primary" />
-            Revenue Track
+            <Icon name="Briefcase" size={32} className="text-primary" />
+            BusinessHub
           </h1>
           <p className="text-muted-foreground">
             {step === 'register' ? 'Регистрация нового аккаунта' : 'Подтверждение email'}

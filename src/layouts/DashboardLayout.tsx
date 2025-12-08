@@ -49,7 +49,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const navItems: NavItem[] = [
-    { id: 'dashboard', label: 'Дашборд', icon: 'LayoutDashboard', path: '/' },
+    { id: 'dashboard', label: 'Дашборд', icon: 'LayoutDashboard', path: '/dashboard' },
     { id: 'employees', label: 'Сотрудники', icon: 'Users', path: '/employees' },
     { id: 'clients', label: 'Клиенты', icon: 'UserCheck', path: '/clients' },
     { id: 'projects', label: 'Проекты', icon: 'FolderKanban', path: '/projects' },
@@ -69,10 +69,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <aside className="fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
           <h1 className="text-2xl font-bold text-sidebar-foreground flex items-center gap-2">
-            <Icon name="BarChart3" size={28} className="text-sidebar-primary" />
-            Revenue Track
+            <Icon name="Briefcase" size={28} className="text-primary" />
+            BusinessHub
           </h1>
-          <p className="text-sm text-sidebar-foreground/60 mt-1">Управление выручкой</p>
+          <p className="text-sm text-sidebar-foreground/60 mt-1">Управление бизнесом</p>
         </div>
         
         <nav className="p-4 flex-1">
