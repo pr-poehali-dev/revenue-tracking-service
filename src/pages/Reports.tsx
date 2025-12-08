@@ -13,16 +13,46 @@ type ReportCard = {
   color: string;
 };
 
+type Stats = {
+  clients: { total: number; growth: number };
+  projects: { total: number; growth: number };
+  revenue: { total: number; growth: number };
+  orders: { total: number; growth: number };
+};
+
+const STATS_API_URL = 'https://functions.poehali.dev/f127eb56-21d2-49b6-abe8-68a213f0ae86';
+
 export default function Reports() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
       navigate('/login');
+    } else {
+      loadStats();
     }
   }, [navigate]);
+
+  const loadStats = async () => {
+    try {
+      const userId = localStorage.getItem('user_id');
+      const response = await fetch(STATS_API_URL, {
+        method: 'GET',
+        headers: {
+          'X-User-Id': userId || ''
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setStats(data);
+      }
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    }
+  };
 
   const reports: ReportCard[] = [
     {
@@ -128,43 +158,49 @@ export default function Reports() {
             <CardDescription>Ключевые показатели за текущий месяц</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="flex items-center gap-2 text-blue-500 mb-2">
-                  <Icon name="UserCheck" size={20} />
-                  <span className="font-medium">Клиенты</span>
+            {stats ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2 text-blue-500 mb-2">
+                    <Icon name="UserCheck" size={20} />
+                    <span className="font-medium">Клиенты</span>
+                  </div>
+                  <p className="text-2xl font-bold">{stats.clients.total}</p>
+                  <p className="text-sm text-muted-foreground">+{stats.clients.growth}% за месяц</p>
                 </div>
-                <p className="text-2xl font-bold">156</p>
-                <p className="text-sm text-muted-foreground">+12% за месяц</p>
-              </div>
-              
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="flex items-center gap-2 text-purple-500 mb-2">
-                  <Icon name="FolderKanban" size={20} />
-                  <span className="font-medium">Проекты</span>
+                
+                <div className="p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2 text-purple-500 mb-2">
+                    <Icon name="FolderKanban" size={20} />
+                    <span className="font-medium">Проекты</span>
+                  </div>
+                  <p className="text-2xl font-bold">{stats.projects.total}</p>
+                  <p className="text-sm text-muted-foreground">+{stats.projects.growth}% за месяц</p>
                 </div>
-                <p className="text-2xl font-bold">43</p>
-                <p className="text-sm text-muted-foreground">+5% за месяц</p>
-              </div>
-              
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="flex items-center gap-2 text-green-500 mb-2">
-                  <Icon name="DollarSign" size={20} />
-                  <span className="font-medium">Выручка</span>
+                
+                <div className="p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2 text-green-500 mb-2">
+                    <Icon name="DollarSign" size={20} />
+                    <span className="font-medium">Выручка</span>
+                  </div>
+                  <p className="text-2xl font-bold">{(stats.revenue.total / 1000000).toFixed(1)}M ₽</p>
+                  <p className="text-sm text-muted-foreground">+{stats.revenue.growth}% за месяц</p>
                 </div>
-                <p className="text-2xl font-bold">2.4M ₽</p>
-                <p className="text-sm text-muted-foreground">+18% за месяц</p>
-              </div>
-              
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="flex items-center gap-2 text-orange-500 mb-2">
-                  <Icon name="ShoppingCart" size={20} />
-                  <span className="font-medium">Заказы</span>
+                
+                <div className="p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2 text-orange-500 mb-2">
+                    <Icon name="ShoppingCart" size={20} />
+                    <span className="font-medium">Заказы</span>
+                  </div>
+                  <p className="text-2xl font-bold">{stats.orders.total}</p>
+                  <p className="text-sm text-muted-foreground">+{stats.orders.growth}% за месяц</p>
                 </div>
-                <p className="text-2xl font-bold">289</p>
-                <p className="text-sm text-muted-foreground">+8% за месяц</p>
               </div>
-            </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                Загрузка статистики...
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

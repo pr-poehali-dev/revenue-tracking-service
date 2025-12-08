@@ -1,0 +1,32 @@
+{
+  "tests": [
+    {
+      "name": "Get statistics",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "clients": {
+          "total": "number",
+          "growth": "number"
+        },
+        "projects": {
+          "total": "number",
+          "growth": "number"
+        },
+        "revenue": {
+          "total": "number",
+          "growth": "number"
+        },
+        "orders": {
+          "total": "number",
+          "growth": "number"
+        }
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
