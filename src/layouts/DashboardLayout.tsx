@@ -102,9 +102,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             }`}
           >
             <Avatar className="w-8 h-8">
-              <AvatarImage src={userProfile?.avatar_url || ''} />
-              <AvatarFallback className="text-xs">
-                {userProfile?.first_name?.[0]}{userProfile?.last_name?.[0]}
+              <AvatarImage src={userProfile?.avatar_url} />
+              <AvatarFallback className="text-xs bg-primary text-primary-foreground font-medium">
+                {userProfile?.first_name?.[0]?.toUpperCase()}{userProfile?.last_name?.[0]?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-start">
