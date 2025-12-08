@@ -131,7 +131,7 @@ const Register = () => {
           description: 'Регистрация успешно завершена'
         });
         
-        setTimeout(() => navigate('/dashboard'), 1000);
+        setTimeout(() => navigate('/'), 1000);
       } else {
         toast({
           title: 'Ошибка',

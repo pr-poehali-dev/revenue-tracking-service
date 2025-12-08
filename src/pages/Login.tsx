@@ -47,7 +47,7 @@ const Login = () => {
           description: 'Вход выполнен успешно'
         });
         
-        setTimeout(() => navigate('/dashboard'), 500);
+        setTimeout(() => navigate('/'), 500);
       } else {
         toast({
           title: 'Ошибка входа',
