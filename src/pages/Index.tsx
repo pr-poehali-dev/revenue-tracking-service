@@ -225,76 +225,95 @@ const Index = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Icon name="TrendingUp" size={20} />
-              Выручка по месяцам
+              Динамика выручки
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {revenueByMonth.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Icon name="TrendingUp" size={48} className="mx-auto mb-2 opacity-50" />
-                  <p>Нет данных о выручке</p>
-                </div>
-              ) : (
-                revenueByMonth.map((item, index) => (
+            {revenueByMonth.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Нет данных о платежах
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {revenueByMonth.map((item, index) => (
                   <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-foreground">{item.month}</span>
-                      <div className="flex gap-4">
-                        <span className="text-muted-foreground">
-                          План: {formatAmount(item.planned)}
-                        </span>
-                        <span className="font-medium text-primary">
-                          Факт: {formatAmount(item.actual)}
-                        </span>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground font-medium">{item.month}</span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="font-semibold text-green-700">{formatAmount(item.actual)}</span>
+                        {item.planned > 0 && (
+                          <span className="text-xs text-muted-foreground">План: {formatAmount(item.planned)}</span>
+                        )}
                       </div>
                     </div>
-                    <div className="relative h-8 bg-muted rounded-full overflow-hidden">
-                      {item.planned > 0 && (
-                        <div
-                          className="absolute h-full bg-muted-foreground/30 rounded-full"
-                          style={{ width: `${(item.planned / maxRevenue) * 100}%` }}
-                        />
-                      )}
-                      {item.actual > 0 && (
-                        <div
-                          className="absolute h-full bg-primary rounded-full"
-                          style={{ width: `${(item.actual / maxRevenue) * 100}%` }}
-                        />
-                      )}
+                    <div className="w-full bg-secondary rounded-full h-2 overflow-hidden relative">
+                      <div
+                        className="bg-blue-400 h-full rounded-full transition-all duration-500 ease-out absolute"
+                        style={{ 
+                          width: `${((item.actual + item.planned) / maxRevenue) * 100}%`,
+                          left: 0
+                        }}
+                      />
+                      <div
+                        className="bg-green-600 h-full rounded-full transition-all duration-500 ease-out absolute z-10"
+                        style={{ width: `${(item.actual / maxRevenue) * 100}%` }}
+                      />
                     </div>
+                    {(item.actual > 0 || item.planned > 0) && (
+                      <div className="flex gap-4 text-xs">
+                        {item.actual > 0 && (
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 rounded-full bg-green-600"></div>
+                            <span className="text-muted-foreground">Фактическая</span>
+                          </div>
+                        )}
+                        {item.planned > 0 && (
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 rounded-full bg-blue-400"></div>
+                            <span className="text-muted-foreground">Планируемая</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Icon name="Wallet" size={20} />
-              Последние платежи
+              <Icon name="ShoppingCart" size={20} />
+              Активные заказы
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {recentPayments.length === 0 ? (
+            {orders.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <Icon name="Wallet" size={48} className="mx-auto mb-2 opacity-50" />
-                <p>Нет платежей</p>
+                <Icon name="ShoppingCart" size={48} className="mx-auto mb-4 opacity-50" />
+                <p>Активных заказов нет</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {recentPayments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between pb-3 border-b last:border-0 last:pb-0">
-                    <div>
-                      <p className="font-medium text-foreground text-sm">{payment.order_name || 'Заказ'}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(payment.actual_date).toLocaleDateString('ru-RU')}
-                      </p>
+                {orders.slice(0, 5).map((order) => (
+                  <div key={order.id} className="space-y-2 pb-4 border-b last:border-b-0">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-sm">{order.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {order.project_name}
+                          {order.client_name && ` • ${order.client_name}`}
+                        </p>
+                      </div>
+                      {getOrderStatusBadge(order.order_status)}
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-primary">{formatAmount(payment.actual_amount)}</p>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">
+                        {order.planned_date && `До ${new Date(order.planned_date).toLocaleDateString('ru-RU')}`}
+                      </span>
+                      <span className="font-semibold">{formatAmount(order.amount)}</span>
                     </div>
                   </div>
                 ))}
@@ -305,45 +324,44 @@ const Index = () => {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Icon name="ShoppingCart" size={20} />
-            Активные заказы
+            <Icon name="CreditCard" size={20} />
+            Последние платежи
           </CardTitle>
-          <Button onClick={() => navigate('/orders')} variant="outline" size="sm">
-            Смотреть все
-            <Icon name="ArrowRight" size={16} className="ml-2" />
-          </Button>
         </CardHeader>
         <CardContent>
-          {orders.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Icon name="ShoppingCart" size={64} className="mx-auto mb-4 opacity-50" />
-              <p className="text-lg mb-2">Нет активных заказов</p>
-              <Button onClick={() => navigate('/orders')} variant="outline">
-                <Icon name="Plus" size={16} className="mr-2" />
-                Создать заказ
-              </Button>
+          {recentPayments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Icon name="CreditCard" size={48} className="mx-auto mb-4 opacity-50" />
+              <p>Платежей пока нет</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Заказ</TableHead>
-                  <TableHead>Клиент</TableHead>
-                  <TableHead>Проект</TableHead>
-                  <TableHead>Статус</TableHead>
+                  <TableHead>Проект / Клиент</TableHead>
+                  <TableHead>Дата</TableHead>
                   <TableHead className="text-right">Сумма</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.slice(0, 5).map((order) => (
-                  <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate('/orders')}>
-                    <TableCell className="font-medium">{order.name}</TableCell>
-                    <TableCell>{order.client_name || '—'}</TableCell>
-                    <TableCell>{order.project_name || '—'}</TableCell>
-                    <TableCell>{getOrderStatusBadge(order.status)}</TableCell>
-                    <TableCell className="text-right font-medium">{formatAmount(order.amount)}</TableCell>
+                {recentPayments.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell className="font-medium">{payment.order_name || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      <div>
+                        {payment.project_name && <div className="text-sm">{payment.project_name}</div>}
+                        {payment.client_name && <div className="text-xs">{payment.client_name}</div>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {payment.actual_date ? new Date(payment.actual_date).toLocaleDateString('ru-RU') : '—'}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {formatAmount(payment.actual_amount)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
