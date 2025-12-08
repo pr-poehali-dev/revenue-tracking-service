@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +20,7 @@ interface Order {
 }
 
 export default function Payments() {
+  const navigate = useNavigate();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,17 +49,31 @@ export default function Payments() {
     try {
       const userId = localStorage.getItem('user_id');
       const companyId = localStorage.getItem('company_id');
+      
+      console.log('Loading payments with:', { userId, companyId });
+      
+      if (!userId || !companyId) {
+        toast({
+          title: 'Ошибка авторизации',
+          description: 'Пожалуйста, войдите в систему заново',
+          variant: 'destructive'
+        });
+        setTimeout(() => navigate('/login'), 1500);
+        return;
+      }
+      
       const url = `${API_URL}?status=${viewMode}`;
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'X-User-Id': userId || '',
-          'X-Company-Id': companyId || ''
+          'X-User-Id': userId,
+          'X-Company-Id': companyId
         }
       });
 
       const data = await response.json();
+      console.log('Response:', { status: response.status, data });
 
       if (response.ok) {
         setPayments(data.payments || []);
@@ -69,6 +85,7 @@ export default function Payments() {
         });
       }
     } catch (error) {
+      console.error('Load payments error:', error);
       toast({
         title: 'Ошибка',
         description: 'Не удалось связаться с сервером',
