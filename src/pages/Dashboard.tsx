@@ -253,7 +253,7 @@ const Dashboard = () => {
                         </span>
                       </div>
                     </div>
-                    <div className="relative h-4 bg-muted overflow-hidden rounded-full my-1">
+                    <div className="relative h-2 bg-muted overflow-hidden rounded-full my-1">
                       {item.planned > 0 && (
                         <div
                           className="absolute h-full bg-muted-foreground/30 rounded-full"
