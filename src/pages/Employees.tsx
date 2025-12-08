@@ -53,10 +53,12 @@ export default function Employees() {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(API_URL, {
         method: 'GET',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 
@@ -100,11 +102,13 @@ export default function Employees() {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         },
         body: JSON.stringify({
           email: newEmployeeEmail,
@@ -147,11 +151,13 @@ export default function Employees() {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(API_URL, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         },
         body: JSON.stringify({
           employee_id: selectedEmployee.id,
@@ -194,10 +200,12 @@ export default function Employees() {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${API_URL}?employee_id=${employee.id}`, {
         method: 'DELETE',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 

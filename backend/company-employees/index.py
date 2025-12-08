@@ -26,7 +26,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id',
+                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id, X-Company-Id',
                 'Access-Control-Max-Age': '86400'
             },
             'body': '',
@@ -36,8 +36,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         headers = event.get('headers', {})
         user_id = headers.get('X-User-Id') or headers.get('x-user-id')
+        company_id_header = headers.get('X-Company-Id') or headers.get('x-company-id')
         
-        if not user_id:
+        if not user_id or not company_id_header:
             return {
                 'statusCode': 401,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -46,30 +47,29 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
         
         user_id = int(user_id)
+        company_id = int(company_id_header)
         
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Получаем текущую компанию и роль пользователя
+        # Проверяем доступ пользователя к компании и получаем роль
         cur.execute(f"""
-            SELECT u.current_company_id, cu.role
-            FROM users u
-            LEFT JOIN company_users cu ON u.current_company_id = cu.company_id AND cu.user_id = u.id
-            WHERE u.id = {user_id}
+            SELECT company_id, role
+            FROM company_users
+            WHERE user_id = {user_id} AND company_id = {company_id}
         """)
         user_data = cur.fetchone()
         
-        if not user_data or not user_data[0]:
+        if not user_data:
             cur.close()
             conn.close()
             return {
-                'statusCode': 400,
+                'statusCode': 403,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'error': 'Компания не выбрана'}),
+                'body': json.dumps({'error': 'Доступ к компании запрещён'}),
                 'isBase64Encoded': False
             }
         
-        current_company_id = user_data[0]
         user_role = user_data[1]
         
         if method == 'GET':
@@ -79,7 +79,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                        u.phone, u.avatar_url, cu.role, cu.created_at
                 FROM users u
                 JOIN company_users cu ON u.id = cu.user_id
-                WHERE cu.company_id = {current_company_id}
+                WHERE cu.company_id = {company_id}
                 ORDER BY 
                     CASE cu.role
                         WHEN 'owner' THEN 1
@@ -176,7 +176,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             # Проверка, не состоит ли уже в компании
             cur.execute(f"""
                 SELECT id FROM company_users 
-                WHERE company_id = {current_company_id} AND user_id = {employee_id}
+                WHERE company_id = {company_id} AND user_id = {employee_id}
             """)
             
             if cur.fetchone():
@@ -192,7 +192,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             # Добавляем сотрудника
             cur.execute(f"""
                 INSERT INTO company_users (company_id, user_id, role, created_at)
-                VALUES ({current_company_id}, {employee_id}, {escape_sql_string(role)}, NOW())
+                VALUES ({company_id}, {employee_id}, {escape_sql_string(role)}, NOW())
             """)
             
             conn.commit()
@@ -246,7 +246,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             # Получаем текущую роль сотрудника
             cur.execute(f"""
                 SELECT role FROM company_users 
-                WHERE company_id = {current_company_id} AND user_id = {employee_id}
+                WHERE company_id = {company_id} AND user_id = {employee_id}
             """)
             current_role_data = cur.fetchone()
             
@@ -288,7 +288,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             cur.execute(f"""
                 UPDATE company_users
                 SET role = {escape_sql_string(new_role)}
-                WHERE company_id = {current_company_id} AND user_id = {employee_id}
+                WHERE company_id = {company_id} AND user_id = {employee_id}
             """)
             
             conn.commit()
@@ -332,7 +332,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             # Получаем роль удаляемого сотрудника
             cur.execute(f"""
                 SELECT role FROM company_users 
-                WHERE company_id = {current_company_id} AND user_id = {employee_id}
+                WHERE company_id = {company_id} AND user_id = {employee_id}
             """)
             employee_role_data = cur.fetchone()
             
@@ -373,7 +373,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             # Удаляем сотрудника из компании
             cur.execute(f"""
                 DELETE FROM company_users 
-                WHERE company_id = {current_company_id} AND user_id = {employee_id}
+                WHERE company_id = {company_id} AND user_id = {employee_id}
             """)
             
             conn.commit()

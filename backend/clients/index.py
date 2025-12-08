@@ -12,11 +12,12 @@ def escape_sql_string(s: str) -> str:
         return 'NULL'
     return "'" + s.replace("'", "''") + "'"
 
-def get_user_company_id(user_id: int, cur) -> int:
-    cur.execute(f"SELECT company_id FROM company_users WHERE user_id = {user_id} LIMIT 1")
+def get_user_company_id(user_id: int, company_id: int, cur) -> int:
+    """Проверяет, что пользователь имеет доступ к указанной компании"""
+    cur.execute(f"SELECT company_id FROM company_users WHERE user_id = {user_id} AND company_id = {company_id}")
     result = cur.fetchone()
     if not result:
-        raise Exception('Пользователь не привязан к компании')
+        raise Exception('Доступ к компании запрещён')
     return result[0]
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -34,7 +35,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id',
+                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id, X-Company-Id',
                 'Access-Control-Max-Age': '86400'
             },
             'body': '',
@@ -44,8 +45,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         headers = event.get('headers', {})
         user_id = headers.get('X-User-Id') or headers.get('x-user-id')
+        company_id_header = headers.get('X-Company-Id') or headers.get('x-company-id')
         
-        if not user_id:
+        if not user_id or not company_id_header:
             return {
                 'statusCode': 401,
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -54,11 +56,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
         
         user_id = int(user_id)
+        company_id = int(company_id_header)
         
         conn = get_db_connection()
         cur = conn.cursor()
         
-        company_id = get_user_company_id(user_id, cur)
+        get_user_company_id(user_id, company_id, cur)
         
         if method == 'GET':
             query_params = event.get('queryStringParameters') or {}

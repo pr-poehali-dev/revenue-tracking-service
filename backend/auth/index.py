@@ -246,7 +246,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             
             cur.execute(f"""
-                SELECT id, email_verification_code, verification_code_expires_at, is_email_verified
+                SELECT id, email_verification_code, verification_code_expires_at, is_email_verified, current_company_id
                 FROM users WHERE email = {escape_sql_string(email)}
             """)
             
@@ -261,7 +261,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
-            user_id, stored_code, expires_at, is_verified = user
+            user_id, stored_code, expires_at, is_verified, current_company_id = user
             
             if is_verified:
                 cur.close()
@@ -311,7 +311,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'body': json.dumps({
                     'success': True,
                     'token': token,
-                    'user_id': user_id
+                    'user_id': user_id,
+                    'company_id': current_company_id
                 }),
                 'isBase64Encoded': False
             }
@@ -333,7 +334,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             password_hash = hash_password(password)
             
             cur.execute(f"""
-                SELECT id, is_email_verified FROM users 
+                SELECT id, is_email_verified, current_company_id FROM users 
                 WHERE email = {escape_sql_string(email)} AND password_hash = {escape_sql_string(password_hash)}
             """)
             
@@ -348,7 +349,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
-            user_id, is_verified = user
+            user_id, is_verified, current_company_id = user
             
             if not is_verified:
                 cur.close()
@@ -371,7 +372,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'body': json.dumps({
                     'success': True,
                     'token': token,
-                    'user_id': user_id
+                    'user_id': user_id,
+                    'company_id': current_company_id
                 }),
                 'isBase64Encoded': False
             }

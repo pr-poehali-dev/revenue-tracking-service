@@ -48,6 +48,9 @@ const Login = () => {
       if (response.ok && data.success) {
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('user_id', data.user_id);
+        if (data.company_id) {
+          localStorage.setItem('company_id', data.company_id);
+        }
         
         toast({
           title: 'Добро пожаловать!',

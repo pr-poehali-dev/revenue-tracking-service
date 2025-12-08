@@ -58,8 +58,9 @@ const Dashboard = () => {
 
   const loadClients = async (userId: string) => {
     try {
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${CLIENTS_API_URL}?status=active`, {
-        headers: { 'X-User-Id': userId }
+        headers: { 'X-User-Id': userId, 'X-Company-Id': companyId || '' }
       });
       const data = await response.json();
       if (response.ok) {
@@ -72,8 +73,9 @@ const Dashboard = () => {
 
   const loadProjects = async (userId: string) => {
     try {
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${PROJECTS_API_URL}?status=active`, {
-        headers: { 'X-User-Id': userId }
+        headers: { 'X-User-Id': userId, 'X-Company-Id': companyId || '' }
       });
       const data = await response.json();
       if (response.ok) {
@@ -86,8 +88,9 @@ const Dashboard = () => {
 
   const loadOrders = async (userId: string) => {
     try {
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${ORDERS_API_URL}?status=active`, {
-        headers: { 'X-User-Id': userId }
+        headers: { 'X-User-Id': userId, 'X-Company-Id': companyId || '' }
       });
       const data = await response.json();
       if (response.ok) {
@@ -101,8 +104,9 @@ const Dashboard = () => {
 
   const loadPayments = async (userId: string) => {
     try {
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${PAYMENTS_API_URL}?status=active`, {
-        headers: { 'X-User-Id': userId }
+        headers: { 'X-User-Id': userId, 'X-Company-Id': companyId || '' }
       });
       const data = await response.json();
       if (response.ok) {

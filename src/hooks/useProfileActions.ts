@@ -372,6 +372,7 @@ export function useProfileActions({
       const data = await response.json();
 
       if (response.ok) {
+        localStorage.setItem('company_id', companyId.toString());
         toast({
           title: 'Успешно!',
           description: 'Компания переключена'
@@ -415,6 +416,9 @@ export function useProfileActions({
       const data = await response.json();
 
       if (response.ok) {
+        if (data.company_id) {
+          localStorage.setItem('company_id', data.company_id.toString());
+        }
         toast({
           title: 'Успешно!',
           description: 'Компания создана'

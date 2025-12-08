@@ -32,10 +32,12 @@ export default function Clients() {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${API_URL}?status=${viewMode}`, {
         method: 'GET',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 
@@ -126,13 +128,15 @@ export default function Clients() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const method = editingClient ? 'PUT' : 'POST';
       
       const response = await fetch(API_URL, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         },
         body: JSON.stringify(formData)
       });
@@ -173,11 +177,13 @@ export default function Clients() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(API_URL, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         },
         body: JSON.stringify({
           id: clientId,
@@ -223,10 +229,12 @@ export default function Clients() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${API_URL}?id=${clientId}`, {
         method: 'DELETE',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 
@@ -265,11 +273,13 @@ export default function Clients() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(API_URL, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         },
         body: JSON.stringify({
           id: clientId,

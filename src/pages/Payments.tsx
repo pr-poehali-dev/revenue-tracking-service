@@ -46,12 +46,14 @@ export default function Payments() {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const url = `${API_URL}?status=${viewMode}`;
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 
@@ -80,10 +82,12 @@ export default function Payments() {
   const loadOrders = async () => {
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${ORDERS_API_URL}?status=active`, {
         method: 'GET',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 
@@ -146,13 +150,15 @@ export default function Payments() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const method = editingPayment ? 'PUT' : 'POST';
       
       const response = await fetch(API_URL, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         },
         body: JSON.stringify(formData)
       });
@@ -193,12 +199,14 @@ export default function Payments() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const payment = payments.find(p => p.id === paymentId);
       const response = await fetch(API_URL, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         },
         body: JSON.stringify({
           id: paymentId,
@@ -248,12 +256,14 @@ export default function Payments() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const payment = payments.find(p => p.id === paymentId);
       const response = await fetch(API_URL, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         },
         body: JSON.stringify({
           id: paymentId,
@@ -302,10 +312,12 @@ export default function Payments() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${API_URL}?id=${paymentId}`, {
         method: 'DELETE',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 

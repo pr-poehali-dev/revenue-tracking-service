@@ -47,12 +47,14 @@ export default function Orders() {
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const url = `${API_URL}?status=${viewMode}`;
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 
@@ -81,10 +83,12 @@ export default function Orders() {
   const loadProjects = async () => {
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${PROJECTS_API_URL}?status=active`, {
         method: 'GET',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 
@@ -153,13 +157,15 @@ export default function Orders() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const method = editingOrder ? 'PUT' : 'POST';
       
       const response = await fetch(API_URL, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         },
         body: JSON.stringify(formData)
       });
@@ -258,12 +264,14 @@ export default function Orders() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const order = orders.find(o => o.id === orderId);
       const response = await fetch(API_URL, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         },
         body: JSON.stringify({
           id: orderId,
@@ -315,10 +323,12 @@ export default function Orders() {
 
     try {
       const userId = localStorage.getItem('user_id');
+      const companyId = localStorage.getItem('company_id');
       const response = await fetch(`${API_URL}?id=${orderId}`, {
         method: 'DELETE',
         headers: {
-          'X-User-Id': userId || ''
+          'X-User-Id': userId || '',
+          'X-Company-Id': companyId || ''
         }
       });
 
