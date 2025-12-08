@@ -17,7 +17,7 @@ const Landing = () => {
     },
     {
       icon: 'Wallet',
-      title: 'Управление оплатами',
+      title: 'Управление платежами',
       description: 'Планируйте платежи, отслеживайте выручку и контролируйте финансовые потоки.'
     },
     {
@@ -61,11 +61,11 @@ const Landing = () => {
       <section className="container mx-auto px-4 py-20 text-center">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6">
-            Управляйте бизнесом
+            Управляйте выручкой
             <span className="text-primary"> эффективно</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8">
-            Современная CRM-система для управления клиентами, проектами, заказами и финансами вашего бизнеса
+            Современная система для управления клиентами, проектами, заказами и финансами вашего бизнеса
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/register">
@@ -74,10 +74,12 @@ const Landing = () => {
                 <Icon name="ArrowRight" className="ml-2" size={20} />
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="text-lg px-8">
-              Смотреть демо
-              <Icon name="Play" className="ml-2" size={20} />
-            </Button>
+            <Link to="/login">
+              <Button size="lg" variant="outline" className="text-lg px-8">
+                Войти в систему
+                <Icon name="LogIn" className="ml-2" size={20} />
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
