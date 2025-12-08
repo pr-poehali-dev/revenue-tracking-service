@@ -170,7 +170,10 @@ const Dashboard = () => {
       });
   };
 
-  const maxRevenue = Math.max(...revenueByMonth.map(m => m.actual + m.planned), 1);
+  const maxRevenue = Math.max(
+    ...revenueByMonth.map(m => Math.max(m.actual, m.planned)),
+    1
+  );
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -253,16 +256,16 @@ const Dashboard = () => {
                         </span>
                       </div>
                     </div>
-                    <div className="relative h-2 bg-muted overflow-hidden rounded-full my-1">
+                    <div className="relative h-3 bg-muted overflow-hidden rounded-full my-1">
                       {item.planned > 0 && (
                         <div
-                          className="absolute h-full bg-muted-foreground/30 rounded-full"
+                          className="absolute h-full bg-blue-200 rounded-full transition-all"
                           style={{ width: `${(item.planned / maxRevenue) * 100}%` }}
                         />
                       )}
                       {item.actual > 0 && (
                         <div
-                          className="absolute h-full bg-primary rounded-full"
+                          className="absolute h-full bg-primary rounded-full transition-all"
                           style={{ width: `${(item.actual / maxRevenue) * 100}%` }}
                         />
                       )}
