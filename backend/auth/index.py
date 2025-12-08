@@ -204,6 +204,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 VALUES ({company_id}, {user_id}, 'owner')
             """)
             
+            cur.execute(f"""
+                UPDATE users SET current_company_id = {company_id}
+                WHERE id = {user_id}
+            """)
+            
             conn.commit()
             
             # Отправка email обязательна для безопасности
@@ -293,6 +298,15 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
+            company_id = current_company_id
+            
+            if not company_id:
+                cur.execute(f"SELECT company_id FROM company_users WHERE user_id = {user_id} LIMIT 1")
+                company_result = cur.fetchone()
+                if company_result:
+                    company_id = company_result[0]
+                    cur.execute(f"UPDATE users SET current_company_id = {company_id} WHERE id = {user_id}")
+            
             cur.execute(f"""
                 UPDATE users SET is_email_verified = TRUE, 
                 email_verification_code = NULL, verification_code_expires_at = NULL
@@ -312,7 +326,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'success': True,
                     'token': token,
                     'user_id': user_id,
-                    'company_id': current_company_id
+                    'company_id': company_id
                 }),
                 'isBase64Encoded': False
             }
