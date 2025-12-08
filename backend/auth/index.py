@@ -361,6 +361,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'isBase64Encoded': False
                 }
             
+            company_id = current_company_id
+            
+            if not company_id:
+                cur.execute(f"SELECT company_id FROM company_users WHERE user_id = {user_id} LIMIT 1")
+                company_result = cur.fetchone()
+                if company_result:
+                    company_id = company_result[0]
+            
             token = generate_jwt(user_id, email)
             
             cur.close()
@@ -373,7 +381,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'success': True,
                     'token': token,
                     'user_id': user_id,
-                    'company_id': current_company_id
+                    'company_id': company_id
                 }),
                 'isBase64Encoded': False
             }
