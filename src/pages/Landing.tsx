@@ -151,9 +151,7 @@ const Landing = () => {
               </div>
               <span className="font-bold text-foreground">Luma Finance</span>
             </div>
-            <p className="text-muted-foreground text-sm">
-              © 2024 Revenue Track. Все права защищены.
-            </p>
+            <p className="text-muted-foreground text-sm">© 2025 Luma Finance. Все права защищены.</p>
           </div>
         </div>
       </footer>
