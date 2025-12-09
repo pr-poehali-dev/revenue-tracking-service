@@ -45,7 +45,7 @@ const Landing = () => {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <Icon name="BarChart3" className="text-primary-foreground" size={24} />
             </div>
-            <span className="text-xl font-bold text-foreground">Revenue Track</span>
+            <span className="text-xl font-bold text-foreground">Luma Finance</span>
           </div>
           <div className="flex items-center gap-4">
             <Link to="/login">
