@@ -82,7 +82,7 @@ const Login = () => {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2 mb-2">
             <Icon name="BarChart3" size={32} className="text-primary" />
-            Revenue Track
+            Luma Finance
           </h1>
           <p className="text-muted-foreground">Вход в систему управления выручкой</p>
         </div>
