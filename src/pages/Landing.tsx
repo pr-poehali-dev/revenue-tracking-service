@@ -118,7 +118,7 @@ const Landing = () => {
                     Зарегистрируйтесь бесплатно и получите доступ ко всем возможностям системы
                   </p>
                   <ul className="space-y-3 mb-6">
-                    {['Без кредитной карты', 'Настройка за 5 минут', 'Поддержка 24/7'].map((item, i) => (
+                    {['Без кредитной карты', 'Настройка за 5 минут', 'Бесплатный пробный период 3 месяца'].map((item, i) => (
                       <li key={i} className="flex items-center gap-2 text-foreground">
                         <Icon name="CheckCircle2" className="text-primary" size={20} />
                         <span>{item}</span>
