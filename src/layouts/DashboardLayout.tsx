@@ -69,7 +69,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <aside className="fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
           <h1 className="text-2xl font-bold text-sidebar-foreground flex items-center gap-2">
-            <Icon name="Sparkles" size={28} className="text-primary" />
+            <Icon name="BarChart3" size={28} className="text-primary" />
             Luma Finance
           </h1>
           <p className="text-sm text-sidebar-foreground/60 mt-1">Управление выручкой</p>
