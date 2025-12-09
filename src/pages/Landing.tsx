@@ -149,7 +149,7 @@ const Landing = () => {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <Icon name="BarChart3" className="text-primary-foreground" size={18} />
               </div>
-              <span className="font-bold text-foreground">Revenue Track</span>
+              <span className="font-bold text-foreground">Luma Finance</span>
             </div>
             <p className="text-muted-foreground text-sm">
               © 2024 Revenue Track. Все права защищены.
