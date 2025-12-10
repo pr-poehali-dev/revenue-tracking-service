@@ -1,16 +1,13 @@
 {
   "tests": [
     {
-      "name": "Get company employees list",
+      "name": "Unauthorized access without headers",
       "method": "GET",
       "path": "/",
-      "headers": {
-        "X-User-Id": "1"
-      },
-      "expectedStatus": 200,
+      "headers": {},
+      "expectedStatus": 401,
       "expectedBody": {
-        "employees": "array",
-        "current_user_role": "string"
+        "error": "string"
       },
       "bodyMatcher": "partial"
     }

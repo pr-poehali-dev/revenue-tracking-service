@@ -1,0 +1,27 @@
+{
+  "tests": [
+    {
+      "name": "Check invitation token missing",
+      "method": "GET",
+      "queryParams": {},
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Accept invitation with missing fields",
+      "method": "POST",
+      "body": {
+        "token": "test-token",
+        "password": "pass123"
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

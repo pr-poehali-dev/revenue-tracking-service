@@ -1,4 +1,6 @@
 {
+  "invite-employee": "https://functions.poehali.dev/56672d04-fb2e-4c4b-938b-31555bb4ff5e",
+  "accept-invitation": "https://functions.poehali.dev/1cc2517b-f99e-4e98-b289-6e75044d1ccc",
   "stats": "https://functions.poehali.dev/f127eb56-21d2-49b6-abe8-68a213f0ae86",
   "company-employees": "https://functions.poehali.dev/4fce1ec8-13c8-41e1-bfb0-9ae58fc3789a",
   "profile": "https://functions.poehali.dev/ee2d3742-725a-421c-b7d0-8d2efc6c32db",

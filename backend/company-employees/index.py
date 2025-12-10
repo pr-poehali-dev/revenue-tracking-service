@@ -157,17 +157,21 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             # Проверка существования пользователя
             cur.execute(f"""
-                SELECT id FROM users WHERE email = {escape_sql_string(email)}
+                SELECT id FROM t_p27692930_revenue_tracking_ser.users WHERE email = {escape_sql_string(email)}
             """)
             existing_user = cur.fetchone()
             
             if not existing_user:
+                # Пользователь не найден - нужно отправить приглашение
                 cur.close()
                 conn.close()
                 return {
                     'statusCode': 404,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                    'body': json.dumps({'error': 'Пользователь с таким email не найден'}),
+                    'body': json.dumps({
+                        'error': 'Пользователь с таким email не найден',
+                        'action': 'send_invitation'
+                    }),
                     'isBase64Encoded': False
                 }
             

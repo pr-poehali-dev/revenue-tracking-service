@@ -24,6 +24,7 @@ import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 
 const API_URL = 'https://functions.poehali.dev/4fce1ec8-13c8-41e1-bfb0-9ae58fc3789a';
+const INVITE_API_URL = 'https://functions.poehali.dev/56672d04-fb2e-4c4b-938b-31555bb4ff5e';
 
 interface Employee {
   id: number;
@@ -103,6 +104,8 @@ export default function Employees() {
     try {
       const userId = localStorage.getItem('user_id');
       const companyId = localStorage.getItem('company_id');
+      
+      // Сначала пытаемся добавить существующего пользователя
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -127,6 +130,38 @@ export default function Employees() {
         setNewEmployeeEmail('');
         setNewEmployeeRole('user');
         loadEmployees();
+      } else if (response.status === 404 && data.action === 'send_invitation') {
+        // Пользователь не найден - отправляем приглашение
+        const inviteResponse = await fetch(INVITE_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Id': userId || '',
+            'X-Company-Id': companyId || ''
+          },
+          body: JSON.stringify({
+            email: newEmployeeEmail,
+            role: newEmployeeRole
+          })
+        });
+
+        const inviteData = await inviteResponse.json();
+
+        if (inviteResponse.ok) {
+          toast({
+            title: 'Приглашение отправлено!',
+            description: `На ${newEmployeeEmail} отправлено письмо с приглашением`
+          });
+          setAddDialogOpen(false);
+          setNewEmployeeEmail('');
+          setNewEmployeeRole('user');
+        } else {
+          toast({
+            title: 'Ошибка',
+            description: inviteData.error || 'Не удалось отправить приглашение',
+            variant: 'destructive'
+          });
+        }
       } else {
         toast({
           title: 'Ошибка',
