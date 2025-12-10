@@ -121,22 +121,29 @@ export default function EmployeeCard({ employee, canEdit, onEdit, onDelete, getR
               )}
             </div>
 
-            {canEdit && (
+            {(canEdit || isInvited) && (
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEdit(employee)}
-                >
-                  <Icon name="Edit" size={16} className="mr-1" />
-                  Изменить роль
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDelete(employee)}
-                  className="text-destructive hover:text-destructive"
-                >Уволить</Button>
+                {!isInvited && canEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(employee)}
+                  >
+                    <Icon name="Edit" size={16} className="mr-1" />
+                    Изменить роль
+                  </Button>
+                )}
+                {(canEdit || isInvited) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onDelete(employee)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Icon name={isInvited ? "XCircle" : "Trash2"} size={16} className="mr-1" />
+                    {isInvited ? 'Отозвать приглашение' : 'Удалить'}
+                  </Button>
+                )}
               </div>
             )}
           </div>

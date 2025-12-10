@@ -74,6 +74,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             inv_id, email, company_id, role, company_name, expires_at, status = invitation
             
+            if status == 'cancelled':
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Приглашение было отозвано'}),
+                    'isBase64Encoded': False
+                }
+            
             if status != 'pending':
                 return {
                     'statusCode': 400,
@@ -152,6 +160,16 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
             
             inv_id, email, company_id, role, status, expires_at = invitation
+            
+            if status == 'cancelled':
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'Приглашение было отозвано'}),
+                    'isBase64Encoded': False
+                }
             
             if status != 'pending':
                 cur.close()

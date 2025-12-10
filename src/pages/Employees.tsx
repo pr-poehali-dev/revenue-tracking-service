@@ -199,13 +199,23 @@ export default function Employees() {
   };
 
   const handleDeleteEmployee = async (employee: Employee) => {
-    if (!confirm(`Удалить ${employee.first_name} ${employee.last_name} из компании?`)) return;
+    const isInvited = employee.status === 'invited';
+    const confirmMessage = isInvited 
+      ? `Отозвать приглашение для ${employee.email}?`
+      : `Удалить ${employee.first_name} ${employee.last_name} из компании?`;
+    
+    if (!confirm(confirmMessage)) return;
 
     setLoading(true);
     try {
       const userId = localStorage.getItem('user_id');
       const companyId = localStorage.getItem('company_id');
-      const response = await fetch(`${API_URL}?employee_id=${employee.id}`, {
+      
+      const deleteParam = isInvited 
+        ? `invitation_id=${Math.abs(employee.id)}` 
+        : `employee_id=${employee.id}`;
+      
+      const response = await fetch(`${API_URL}?${deleteParam}`, {
         method: 'DELETE',
         headers: {
           'X-User-Id': userId || '',
@@ -218,13 +228,13 @@ export default function Employees() {
       if (response.ok) {
         toast({
           title: 'Успешно!',
-          description: 'Сотрудник удален'
+          description: isInvited ? 'Приглашение отозвано' : 'Сотрудник удален'
         });
         loadEmployees();
       } else {
         toast({
           title: 'Ошибка',
-          description: data.error || 'Не удалось удалить сотрудника',
+          description: data.error || (isInvited ? 'Не удалось отозвать приглашение' : 'Не удалось удалить сотрудника'),
           variant: 'destructive'
         });
       }

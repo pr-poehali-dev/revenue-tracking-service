@@ -334,7 +334,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
         
         elif method == 'DELETE':
-            # Удаление сотрудника из компании (только owner и admin)
+            # Удаление сотрудника из компании или отзыв приглашения (только owner и admin)
             if user_role not in ['owner', 'admin']:
                 cur.close()
                 conn.close()
@@ -347,14 +347,54 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             query_params = event.get('queryStringParameters') or {}
             employee_id = query_params.get('employee_id')
+            invitation_id = query_params.get('invitation_id')
             
+            # Отзыв приглашения
+            if invitation_id:
+                invitation_id = int(invitation_id)
+                
+                # Проверяем, что приглашение существует и принадлежит компании
+                cur.execute(f"""
+                    SELECT id FROM t_p27692930_revenue_tracking_ser.employee_invitations
+                    WHERE id = {invitation_id} AND company_id = {company_id}
+                """)
+                
+                if not cur.fetchone():
+                    cur.close()
+                    conn.close()
+                    return {
+                        'statusCode': 404,
+                        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                        'body': json.dumps({'error': 'Приглашение не найдено'}),
+                        'isBase64Encoded': False
+                    }
+                
+                # Обновляем статус приглашения на "cancelled"
+                cur.execute(f"""
+                    UPDATE t_p27692930_revenue_tracking_ser.employee_invitations
+                    SET status = 'cancelled'
+                    WHERE id = {invitation_id}
+                """)
+                
+                conn.commit()
+                cur.close()
+                conn.close()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'message': 'Приглашение отозвано'}),
+                    'isBase64Encoded': False
+                }
+            
+            # Удаление сотрудника
             if not employee_id:
                 cur.close()
                 conn.close()
                 return {
                     'statusCode': 400,
                     'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                    'body': json.dumps({'error': 'employee_id обязателен'}),
+                    'body': json.dumps({'error': 'employee_id или invitation_id обязателен'}),
                     'isBase64Encoded': False
                 }
             
