@@ -10,6 +10,9 @@ export interface Employee {
   avatar_url?: string;
   role: string;
   joined_at?: string;
+  status?: 'active' | 'invited';
+  invited_at?: string;
+  expires_at?: string;
 }
 
 export const API_URL = 'https://functions.poehali.dev/4fce1ec8-13c8-41e1-bfb0-9ae58fc3789a';
@@ -31,6 +34,7 @@ export const canManageEmployees = (currentUserRole: string) => {
 };
 
 export const canEditEmployee = (currentUserRole: string, employee: Employee) => {
+  if (employee.status === 'invited') return false;
   if (currentUserRole === 'owner') return employee.role !== 'owner';
   if (currentUserRole === 'admin') return employee.role === 'user' || employee.role === 'viewer';
   return false;

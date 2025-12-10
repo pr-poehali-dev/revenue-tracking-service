@@ -77,8 +77,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             cur.execute(f"""
                 SELECT u.id, u.email, u.first_name, u.last_name, u.middle_name, 
                        u.phone, u.avatar_url, cu.role, cu.created_at
-                FROM users u
-                JOIN company_users cu ON u.id = cu.user_id
+                FROM t_p27692930_revenue_tracking_ser.users u
+                JOIN t_p27692930_revenue_tracking_ser.company_users cu ON u.id = cu.user_id
                 WHERE cu.company_id = {company_id}
                 ORDER BY 
                     CASE cu.role
@@ -102,7 +102,34 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'phone': emp[5],
                     'avatar_url': emp[6],
                     'role': emp[7],
-                    'joined_at': emp[8].isoformat() if emp[8] else None
+                    'joined_at': emp[8].isoformat() if emp[8] else None,
+                    'status': 'active'
+                })
+            
+            # Получение списка приглашённых сотрудников
+            cur.execute(f"""
+                SELECT ei.id, ei.email, ei.role, ei.created_at, ei.expires_at, ei.status
+                FROM t_p27692930_revenue_tracking_ser.employee_invitations ei
+                WHERE ei.company_id = {company_id}
+                AND ei.status = 'pending'
+                AND ei.expires_at > NOW()
+                ORDER BY ei.created_at DESC
+            """)
+            
+            for inv in cur.fetchall():
+                employees.append({
+                    'id': -inv[0],
+                    'email': inv[1],
+                    'first_name': '',
+                    'last_name': '',
+                    'middle_name': None,
+                    'phone': None,
+                    'avatar_url': None,
+                    'role': inv[2],
+                    'joined_at': None,
+                    'status': 'invited',
+                    'invited_at': inv[3].isoformat() if inv[3] else None,
+                    'expires_at': inv[4].isoformat() if inv[4] else None
                 })
             
             cur.close()
