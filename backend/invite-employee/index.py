@@ -22,13 +22,12 @@ def send_invitation_email(email: str, token: str, company_name: str, inviter_nam
     smtp_port = int(os.environ.get('SMTP_PORT', 587))
     smtp_user = os.environ.get('SMTP_USER')
     smtp_password = os.environ.get('SMTP_PASSWORD')
-    app_url = os.environ.get('APP_URL', 'https://your-app.poehali.app')
     
     if not all([smtp_host, smtp_user, smtp_password]):
         raise Exception('SMTP настройки не заданы')
     
     # Ссылка для принятия приглашения
-    invitation_url = f"{app_url}/accept-invitation?token={token}"
+    invitation_url = f"https://your-domain.com/accept-invitation?token={token}"
     
     msg = MIMEMultipart('alternative')
     msg['Subject'] = f'Приглашение в компанию {company_name}'
