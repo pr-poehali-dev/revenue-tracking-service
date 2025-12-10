@@ -83,10 +83,7 @@ export default function EmployeeCard({ employee, canEdit, onEdit, onDelete, getR
                   size="sm"
                   onClick={() => onDelete(employee)}
                   className="text-destructive hover:text-destructive"
-                >
-                  <Icon name="Trash2" size={16} className="mr-1" />
-                  Удалить
-                </Button>
+                >Уволить</Button>
               </div>
             )}
           </div>
