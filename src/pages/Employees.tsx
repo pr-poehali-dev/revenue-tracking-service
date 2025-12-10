@@ -2,41 +2,20 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
-
-const API_URL = 'https://functions.poehali.dev/4fce1ec8-13c8-41e1-bfb0-9ae58fc3789a';
-const INVITE_API_URL = 'https://functions.poehali.dev/56672d04-fb2e-4c4b-938b-31555bb4ff5e';
-
-interface Employee {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  middle_name?: string;
-  phone?: string;
-  avatar_url?: string;
-  role: string;
-  joined_at?: string;
-}
+import EmployeeCard from '@/components/employees/EmployeeCard';
+import AddEmployeeDialog from '@/components/employees/AddEmployeeDialog';
+import EditEmployeeDialog from '@/components/employees/EditEmployeeDialog';
+import {
+  Employee,
+  API_URL,
+  INVITE_API_URL,
+  getRoleBadge,
+  canManageEmployees,
+  canEditEmployee,
+  getAvailableRoles
+} from '@/components/employees/employeeUtils';
 
 export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -45,9 +24,6 @@ export default function Employees() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
-  const [newEmployeeRole, setNewEmployeeRole] = useState('user');
-  const [editRole, setEditRole] = useState('');
   const { toast } = useToast();
 
   const loadEmployees = async () => {
@@ -90,8 +66,8 @@ export default function Employees() {
     loadEmployees();
   }, []);
 
-  const handleAddEmployee = async () => {
-    if (!newEmployeeEmail) {
+  const handleAddEmployee = async (email: string, role: string) => {
+    if (!email) {
       toast({
         title: 'Ошибка',
         description: 'Введите email',
@@ -105,7 +81,6 @@ export default function Employees() {
       const userId = localStorage.getItem('user_id');
       const companyId = localStorage.getItem('company_id');
       
-      // Сначала пытаемся добавить существующего пользователя
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -114,8 +89,8 @@ export default function Employees() {
           'X-Company-Id': companyId || ''
         },
         body: JSON.stringify({
-          email: newEmployeeEmail,
-          role: newEmployeeRole
+          email,
+          role
         })
       });
 
@@ -127,11 +102,8 @@ export default function Employees() {
           description: 'Сотрудник добавлен'
         });
         setAddDialogOpen(false);
-        setNewEmployeeEmail('');
-        setNewEmployeeRole('user');
         loadEmployees();
       } else if (response.status === 404 && data.action === 'send_invitation') {
-        // Пользователь не найден - отправляем приглашение
         const inviteResponse = await fetch(INVITE_API_URL, {
           method: 'POST',
           headers: {
@@ -140,8 +112,8 @@ export default function Employees() {
             'X-Company-Id': companyId || ''
           },
           body: JSON.stringify({
-            email: newEmployeeEmail,
-            role: newEmployeeRole
+            email,
+            role
           })
         });
 
@@ -150,11 +122,9 @@ export default function Employees() {
         if (inviteResponse.ok) {
           toast({
             title: 'Приглашение отправлено!',
-            description: `На ${newEmployeeEmail} отправлено письмо с приглашением`
+            description: `На ${email} отправлено письмо с приглашением`
           });
           setAddDialogOpen(false);
-          setNewEmployeeEmail('');
-          setNewEmployeeRole('user');
         } else {
           toast({
             title: 'Ошибка',
@@ -180,8 +150,8 @@ export default function Employees() {
     }
   };
 
-  const handleEditEmployee = async () => {
-    if (!selectedEmployee || !editRole) return;
+  const handleEditEmployee = async (role: string) => {
+    if (!selectedEmployee || !role) return;
 
     setLoading(true);
     try {
@@ -196,7 +166,7 @@ export default function Employees() {
         },
         body: JSON.stringify({
           employee_id: selectedEmployee.id,
-          role: editRole
+          role
         })
       });
 
@@ -209,7 +179,6 @@ export default function Employees() {
         });
         setEditDialogOpen(false);
         setSelectedEmployee(null);
-        setEditRole('');
         loadEmployees();
       } else {
         toast({
@@ -270,37 +239,13 @@ export default function Employees() {
     }
   };
 
-  const getRoleBadge = (role: string) => {
-    const roles: { [key: string]: { label: string; variant: 'default' | 'secondary' | 'outline' } } = {
-      owner: { label: 'Владелец', variant: 'default' },
-      admin: { label: 'Администратор', variant: 'secondary' },
-      user: { label: 'Базовый', variant: 'outline' },
-      viewer: { label: 'Наблюдатель', variant: 'outline' }
-    };
-    const roleInfo = roles[role] || { label: role, variant: 'outline' };
-    return <Badge variant={roleInfo.variant}>{roleInfo.label}</Badge>;
+  const handleEditClick = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setEditDialogOpen(true);
   };
 
-  const canManageEmployees = currentUserRole === 'owner' || currentUserRole === 'admin';
-  const canEditEmployee = (employee: Employee) => {
-    if (currentUserRole === 'owner') return employee.role !== 'owner';
-    if (currentUserRole === 'admin') return employee.role === 'user' || employee.role === 'viewer';
-    return false;
-  };
-
-  const getAvailableRoles = () => {
-    if (currentUserRole === 'owner') {
-      return [
-        { value: 'admin', label: 'Администратор' },
-        { value: 'user', label: 'Базовый' },
-        { value: 'viewer', label: 'Наблюдатель' }
-      ];
-    }
-    return [
-      { value: 'user', label: 'Базовый' },
-      { value: 'viewer', label: 'Наблюдатель' }
-    ];
-  };
+  const canManage = canManageEmployees(currentUserRole);
+  const availableRoles = getAvailableRoles(currentUserRole);
 
   return (
     <DashboardLayout>
@@ -310,9 +255,9 @@ export default function Employees() {
             <h2 className="text-3xl font-bold text-foreground">Сотрудники</h2>
             <p className="text-muted-foreground mt-1">Управление сотрудниками компании</p>
           </div>
-          {canManageEmployees && (
-            <Button onClick={() => setAddDialogOpen(true)} disabled={loading}>
-              <Icon name="Plus" size={16} className="mr-2" />
+          {canManage && (
+            <Button onClick={() => setAddDialogOpen(true)}>
+              <Icon name="UserPlus" className="mr-2" size={16} />
               Добавить сотрудника
             </Button>
           )}
@@ -320,207 +265,52 @@ export default function Employees() {
 
         {loading && employees.length === 0 ? (
           <Card>
-            <CardContent className="py-16 flex justify-center">
-              <Icon name="Loader2" className="animate-spin" size={48} />
+            <CardContent className="flex items-center justify-center py-12">
+              <Icon name="Loader2" className="animate-spin" size={32} />
+            </CardContent>
+          </Card>
+        ) : employees.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Icon name="Users" className="text-muted-foreground mb-4" size={48} />
+              <h3 className="text-lg font-semibold mb-2">Нет сотрудников</h3>
+              <p className="text-muted-foreground text-center">
+                Добавьте первого сотрудника в компанию
+              </p>
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Icon name="Users" size={20} />
-                Список сотрудников ({employees.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {employees.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Icon name="Users" size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>Нет сотрудников</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {employees.map((employee) => (
-                    <div
-                      key={employee.id}
-                      className="flex items-center justify-between p-4 rounded-lg border bg-background hover:border-primary/50 transition-all"
-                    >
-                      <div className="flex items-center gap-4">
-                        <Avatar className="w-12 h-12">
-                          <AvatarImage src={employee.avatar_url || ''} />
-                          <AvatarFallback>
-                            {employee.first_name[0]}{employee.last_name[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">
-                              {employee.last_name} {employee.first_name} {employee.middle_name || ''}
-                            </p>
-                            {getRoleBadge(employee.role)}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{employee.email}</p>
-                          {employee.phone && (
-                            <p className="text-sm text-muted-foreground">{employee.phone}</p>
-                          )}
-                        </div>
-                      </div>
-                      {canManageEmployees && canEditEmployee(employee) && (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedEmployee(employee);
-                              setEditRole(employee.role);
-                              setEditDialogOpen(true);
-                            }}
-                            disabled={loading}
-                          >
-                            <Icon name="Edit" size={16} />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteEmployee(employee)}
-                            disabled={loading}
-                          >
-                            <Icon name="Trash2" size={16} />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <div className="grid gap-4">
+            {employees.map(employee => (
+              <EmployeeCard
+                key={employee.id}
+                employee={employee}
+                canEdit={canEditEmployee(currentUserRole, employee)}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteEmployee}
+                getRoleBadge={getRoleBadge}
+              />
+            ))}
+          </div>
         )}
       </div>
 
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Добавить сотрудника</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Email сотрудника</Label>
-              <Input
-                type="email"
-                value={newEmployeeEmail}
-                onChange={(e) => setNewEmployeeEmail(e.target.value)}
-                placeholder="employee@example.com"
-              />
-              <p className="text-xs text-muted-foreground">
-                Пользователь должен быть зарегистрирован в системе
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Роль</Label>
-              <Select value={newEmployeeRole} onValueChange={setNewEmployeeRole}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAvailableRoles().map(role => (
-                    <SelectItem key={role.value} value={role.value}>
-                      {role.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setAddDialogOpen(false);
-                setNewEmployeeEmail('');
-                setNewEmployeeRole('user');
-              }}
-              disabled={loading}
-            >
-              Отмена
-            </Button>
-            <Button onClick={handleAddEmployee} disabled={loading || !newEmployeeEmail}>
-              {loading ? (
-                <>
-                  <Icon name="Loader2" className="mr-2 h-4 w-4 animate-spin" />
-                  Добавление...
-                </>
-              ) : (
-                'Добавить'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddEmployeeDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        loading={loading}
+        onAdd={handleAddEmployee}
+        availableRoles={availableRoles}
+      />
 
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Изменить роль сотрудника</DialogTitle>
-          </DialogHeader>
-          {selectedEmployee && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
-                <Avatar className="w-10 h-10">
-                  <AvatarImage src={selectedEmployee.avatar_url || ''} />
-                  <AvatarFallback>
-                    {selectedEmployee.first_name[0]}{selectedEmployee.last_name[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">
-                    {selectedEmployee.last_name} {selectedEmployee.first_name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{selectedEmployee.email}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Новая роль</Label>
-                <Select value={editRole} onValueChange={setEditRole}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableRoles().map(role => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setEditDialogOpen(false);
-                setSelectedEmployee(null);
-                setEditRole('');
-              }}
-              disabled={loading}
-            >
-              Отмена
-            </Button>
-            <Button onClick={handleEditEmployee} disabled={loading || !editRole}>
-              {loading ? (
-                <>
-                  <Icon name="Loader2" className="mr-2 h-4 w-4 animate-spin" />
-                  Сохранение...
-                </>
-              ) : (
-                'Сохранить'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditEmployeeDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        loading={loading}
+        employee={selectedEmployee}
+        onEdit={handleEditEmployee}
+        availableRoles={availableRoles}
+      />
     </DashboardLayout>
   );
 }
