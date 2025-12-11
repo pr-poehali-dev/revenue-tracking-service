@@ -88,7 +88,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Icon name="BarChart3" size={28} className="text-primary" />
                 Luma Finance
               </h1>
-              <p className="text-sm text-sidebar-foreground/60 mt-1">Управление выручкой</p>
+              <p className="text-sm text-sidebar-foreground/60 mt-1 px-6">Управление выручкой</p>
             </>
           )}
         </div>
