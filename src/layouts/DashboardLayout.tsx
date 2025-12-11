@@ -20,7 +20,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [userProfile, setUserProfile] = useState<{ avatar_url?: string; first_name: string; last_name: string; current_company_id?: number; companies?: { id: number; name: string }[] } | null>(null);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebar_collapsed');
+    return saved === 'true';
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -30,6 +33,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       loadUserProfile();
     }
   }, [navigate]);
+
+  useEffect(() => {
+    localStorage.setItem('sidebar_collapsed', String(isSidebarCollapsed));
+  }, [isSidebarCollapsed]);
 
   const loadUserProfile = async () => {
     try {
