@@ -80,7 +80,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="p-6 border-b border-sidebar-border h-[100px] flex flex-col justify-center">
           {isSidebarCollapsed ? (
             <div className="flex justify-center">
-              <Icon name="BarChart3" size={40} className="text-primary" />
+              <Icon name="BarChart3" size={28} className="text-primary" />
             </div>
           ) : (
             <>
