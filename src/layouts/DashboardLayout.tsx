@@ -20,7 +20,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [userProfile, setUserProfile] = useState<{ avatar_url?: string; first_name: string; last_name: string; current_company_id?: number; companies?: { id: number; name: string }[] } | null>(null);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -67,23 +66,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <aside className={`fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 ${
-        isSidebarCollapsed ? 'w-16' : 'w-64'
-      }`}>
+      <aside className="fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
-          {isSidebarCollapsed ? (
-            <div className="flex justify-center">
-              <Icon name="BarChart3" size={28} className="text-primary" />
-            </div>
-          ) : (
-            <>
-              <h1 className="text-2xl font-bold text-sidebar-foreground flex items-center gap-2">
-                <Icon name="BarChart3" size={28} className="text-primary" />
-                Luma Finance
-              </h1>
-              <p className="text-sm text-sidebar-foreground/60 mt-1">Управление выручкой</p>
-            </>
-          )}
+          <h1 className="text-2xl font-bold text-sidebar-foreground flex items-center gap-2">
+            <Icon name="BarChart3" size={28} className="text-primary" />
+            Luma Finance
+          </h1>
+          <p className="text-sm text-sidebar-foreground/60 mt-1">Управление выручкой</p>
         </div>
         
         <nav className="p-4 flex-1">
@@ -95,33 +84,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 location.pathname === item.path
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
                   : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
-              title={isSidebarCollapsed ? item.label : undefined}
+              }`}
             >
               <Icon name={item.icon} size={20} />
-              {!isSidebarCollapsed && <span>{item.label}</span>}
+              <span>{item.label}</span>
             </button>
           ))}
         </nav>
         
         <div className="p-4 border-t border-sidebar-border">
           <button
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2 mb-2 rounded-lg transition-all duration-200 text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-            title={isSidebarCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
-          >
-            <Icon name={isSidebarCollapsed ? 'ChevronRight' : 'ChevronLeft'} size={20} />
-            {!isSidebarCollapsed && <span className="text-sm">Свернуть</span>}
-          </button>
-          
-          <button
             onClick={() => navigate('/profile')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
               location.pathname === '/profile'
                 ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
                 : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-            } ${isSidebarCollapsed ? 'justify-center' : ''}`}
-            title={isSidebarCollapsed ? 'Профиль' : undefined}
+            }`}
           >
             <Avatar className="w-8 h-8">
               <AvatarImage src={userProfile?.avatar_url} />
@@ -129,27 +107,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 {userProfile?.first_name?.[0]?.toUpperCase()}{userProfile?.last_name?.[0]?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            {!isSidebarCollapsed && (
-              <div className="flex flex-col items-start">
-                {userProfile && (
-                  <>
-                    <span className="text-sm font-medium">
-                      {userProfile.first_name} {userProfile.last_name}
-                    </span>
-                    <span className="text-xs opacity-70">
-                      {userProfile.companies?.find(c => c.id === userProfile.current_company_id)?.name || 'Компания'}
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
+            <div className="flex flex-col items-start">
+              {userProfile && (
+                <>
+                  <span className="text-sm font-medium">
+                    {userProfile.first_name} {userProfile.last_name}
+                  </span>
+                  <span className="text-xs opacity-70">
+                    {userProfile.companies?.find(c => c.id === userProfile.current_company_id)?.name || 'Компания'}
+                  </span>
+                </>
+              )}
+            </div>
           </button>
         </div>
       </aside>
 
-      <main className={`p-8 transition-all duration-300 ${
-        isSidebarCollapsed ? 'ml-16' : 'ml-64'
-      }`}>
+      <main className="ml-64 p-8">
         {children}
       </main>
     </div>
