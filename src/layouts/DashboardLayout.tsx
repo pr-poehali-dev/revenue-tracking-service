@@ -84,7 +84,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-bold text-sidebar-foreground flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-sidebar-foreground flex items-center gap-2 px-6">
                 <Icon name="BarChart3" size={28} className="text-primary" />
                 Luma Finance
               </h1>
