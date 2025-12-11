@@ -77,7 +77,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <aside className={`fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 ${
         isSidebarCollapsed ? 'w-16' : 'w-64'
       }`}>
-        <div className="p-6 border-b border-sidebar-border h-[100px] flex flex-col justify-center px-0 py-0">
+        <div className="p-6 border-b border-sidebar-border h-[100px] flex flex-col justify-center">
           {isSidebarCollapsed ? (
             <div className="flex justify-center">
               <Icon name="BarChart3" size={28} className="text-primary" />
