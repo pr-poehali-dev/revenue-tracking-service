@@ -91,11 +91,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <button
               key={item.id}
               onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-all duration-200 ${
+              className={`w-full flex items-center rounded-lg mb-1 transition-all duration-200 ${
                 location.pathname === item.path
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
                   : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+              } ${isSidebarCollapsed ? 'justify-center px-3 py-3' : 'gap-3 px-4 py-3'}`}
               title={isSidebarCollapsed ? item.label : undefined}
             >
               <Icon name={item.icon} size={20} />
@@ -116,11 +116,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           
           <button
             onClick={() => navigate('/profile')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+            className={`w-full flex items-center rounded-lg transition-all duration-200 ${
               location.pathname === '/profile'
                 ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
                 : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-            } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            } ${isSidebarCollapsed ? 'justify-center px-3 py-3' : 'gap-3 px-4 py-3'}`}
             title={isSidebarCollapsed ? 'Профиль' : undefined}
           >
             <Avatar className="w-8 h-8">
